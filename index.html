@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Danita's Quest</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="block-sky" aria-hidden="true">
+      <span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span>
+    </div>
+
+    <main>
+      <section id="gate" class="gate-screen">
+        <div class="gate-card">
+          <p class="eyebrow">For Danita</p>
+          <h1>Danita's Quest</h1>
+          <p class="gate-copy">The hearth is marked, the roads are waiting, and the adventurer may enter when the old words are spoken.</p>
+          <form id="password-form" class="password-form">
+            <label for="password">Password</label>
+            <div class="password-row">
+              <input id="password" type="password" autocomplete="current-password" placeholder="Enter the quest phrase">
+              <button type="submit">Enter</button>
+            </div>
+            <p id="password-message" class="form-message" role="status"></p>
+          </form>
+        </div>
+      </section>
+
+      <section id="app" class="app-shell hidden">
+        <header class="app-header">
+          <div>
+            <p class="eyebrow">Skycraft Quests</p>
+            <h1>Danita, Adventurer of the Hearth</h1>
+            <p class="intro">Three roads are open at once. Finish one quest, and only that path moves forward.</p>
+          </div>
+          <div class="header-actions">
+            <button id="export-save" type="button">Export Save</button>
+            <label class="import-button" for="import-save">Import Save</label>
+            <input id="import-save" type="file" accept="application/json">
+            <button id="reset-save" type="button" class="danger">Reset Progress</button>
+          </div>
+        </header>
+
+        <section class="summary-panel" aria-label="Danita's progress summary">
+          <div><span id="total-complete">0</span><p>Quests Completed</p></div>
+          <div><span id="highest-level">1</span><p>Highest Path Level</p></div>
+          <div><span id="current-focus">The Hearth</span><p>Strongest Path</p></div>
+        </section>
+
+        <section id="tracks" class="tracks" aria-label="Active quest tracks"></section>
+
+        <section class="history-panel">
+          <h2>Danita's Chronicle</h2>
+          <div id="history-list" class="history-list"></div>
+        </section>
+      </section>
+    </main>
+
+    <script src="quests.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
