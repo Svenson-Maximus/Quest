@@ -58,6 +58,19 @@ label.import-button {
   transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  transform: none;
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.36), 0 3px 0 #0a0b0a;
+}
+
+button:disabled:hover {
+  border-color: var(--line);
+  transform: none;
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.36), 0 3px 0 #0a0b0a;
+}
+
 button:hover,
 label.import-button:hover {
   border-color: #e0c574;
@@ -359,6 +372,31 @@ input:focus {
   color: #f4ead0;
   font-size: 1.55rem;
 }
+
+.quest-status {
+  border: 1px solid rgba(199, 167, 91, 0.58);
+  border-radius: 4px;
+  margin: 0.8rem 0;
+  padding: 0.62rem 0.75rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.quest-status.active {
+  background: rgba(65, 91, 62, 0.42);
+  color: #e8f0dd;
+}
+
+.quest-status.locked {
+  background: rgba(86, 46, 40, 0.38);
+  color: #f1c8bf;
+}
+
+.quest-status.ready {
+  background: rgba(69, 84, 91, 0.36);
+  color: #d8e7e8;
+}
+
 .description { line-height: 1.5; color: var(--muted); }
 .objectives {
   padding-left: 1.2rem;

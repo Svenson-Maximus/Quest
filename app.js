@@ -29,6 +29,7 @@ function defaultSave() {
     player: "Danita",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    activeQuest: null,
     tracks,
     history: []
   };
@@ -49,6 +50,7 @@ function normalizeSave(candidate) {
   const merged = {
     ...base,
     ...candidate,
+    activeQuest: candidate.activeQuest || null,
     tracks: { ...base.tracks, ...(candidate.tracks || {}) },
     history: Array.isArray(candidate.history) ? candidate.history : []
   };
@@ -60,6 +62,10 @@ function normalizeSave(candidate) {
     };
     merged.tracks[track].level = calculateLevel(merged.tracks[track].xp);
   });
+
+  if (!isValidActiveQuest(merged.activeQuest, merged)) {
+    merged.activeQuest = null;
+  }
 
   return merged;
 }
@@ -107,6 +113,8 @@ function renderTrack(trackName) {
   const quest = trackData.quests[state.questIndex];
   const completedCount = state.completed.length;
   const totalCount = trackData.quests.length;
+  const isActive = isCurrentQuestActive(trackName);
+  const isLocked = Boolean(save.activeQuest) && !isActive;
 
   if (!quest) {
     return `
@@ -134,6 +142,7 @@ function renderTrack(trackName) {
       <div class="quest-body">
         <p class="quest-number">Quest ${state.questIndex + 1} of ${totalCount}</p>
         <h3 class="quest-title">${escapeHtml(quest.title)}</h3>
+        ${renderQuestStatus(trackName, isActive, isLocked)}
         <p class="description">${escapeHtml(quest.description)}</p>
         <h4>Objectives</h4>
         <ol class="objectives">
@@ -146,12 +155,37 @@ function renderTrack(trackName) {
           <pre>${escapeHtml(quest.commands.join("\n"))}</pre>
         </div>
         <div class="quest-actions">
-          <button type="button" data-action="complete" data-track="${trackName}">Complete Quest</button>
+          ${renderPrimaryAction(trackName, isActive, isLocked)}
           <button type="button" data-action="copy" data-track="${trackName}">Copy Reward</button>
         </div>
       </div>
     </article>
   `;
+}
+
+function renderQuestStatus(trackName, isActive, isLocked) {
+  if (isActive) {
+    return `<div class="quest-status active">Active oath. Finish this quest before choosing another.</div>`;
+  }
+
+  if (isLocked) {
+    const active = getActiveQuestDetails();
+    return `<div class="quest-status locked">Locked while ${escapeHtml(active.title)} is active in ${escapeHtml(active.trackTitle)}.</div>`;
+  }
+
+  return `<div class="quest-status ready">Ready to activate.</div>`;
+}
+
+function renderPrimaryAction(trackName, isActive, isLocked) {
+  if (isActive) {
+    return `<button type="button" data-action="complete" data-track="${trackName}">Complete Active Quest</button>`;
+  }
+
+  if (isLocked) {
+    return `<button type="button" disabled>Another Quest Active</button>`;
+  }
+
+  return `<button type="button" data-action="activate" data-track="${trackName}">Activate Quest</button>`;
 }
 
 function renderStats(state, completedCount, totalCount) {
@@ -198,15 +232,34 @@ tracksEl.addEventListener("click", async (event) => {
   if (!button) return;
   const action = button.dataset.action;
   const trackName = button.dataset.track;
+  if (action === "activate") activateQuest(trackName);
   if (action === "complete") completeQuest(trackName);
   if (action === "copy") await copyReward(trackName, button);
 });
+
+function activateQuest(trackName) {
+  if (save.activeQuest) return;
+
+  const state = save.tracks[trackName];
+  const quest = QUESTS[trackName].quests[state.questIndex];
+  if (!quest) return;
+
+  save.activeQuest = {
+    track: trackName,
+    questIndex: state.questIndex,
+    title: quest.title,
+    activatedAt: new Date().toISOString()
+  };
+  persist();
+  render();
+}
 
 function completeQuest(trackName) {
   const state = save.tracks[trackName];
   const trackData = QUESTS[trackName];
   const quest = trackData.quests[state.questIndex];
   if (!quest) return;
+  if (!isCurrentQuestActive(trackName)) return;
 
   state.xp += XP_PER_QUEST;
   state.level = calculateLevel(state.xp);
@@ -216,6 +269,7 @@ function completeQuest(trackName) {
     completedAt: new Date().toISOString()
   });
   state.questIndex += 1;
+  save.activeQuest = null;
   save.history.push({
     track: trackName,
     trackTitle: trackData.title,
@@ -225,6 +279,30 @@ function completeQuest(trackName) {
   });
   persist();
   render();
+}
+
+function isCurrentQuestActive(trackName) {
+  if (!save.activeQuest) return false;
+  return save.activeQuest.track === trackName && save.activeQuest.questIndex === save.tracks[trackName].questIndex;
+}
+
+function getActiveQuestDetails() {
+  if (!save.activeQuest) {
+    return { title: "no quest", trackTitle: "no path" };
+  }
+
+  const trackData = QUESTS[save.activeQuest.track];
+  return {
+    title: save.activeQuest.title || trackData.quests[save.activeQuest.questIndex]?.title || "the current quest",
+    trackTitle: trackData.title
+  };
+}
+
+function isValidActiveQuest(activeQuest, candidateSave) {
+  if (!activeQuest) return true;
+  if (!TRACKS.includes(activeQuest.track)) return false;
+  const state = candidateSave.tracks[activeQuest.track];
+  return Boolean(state && state.questIndex === activeQuest.questIndex && QUESTS[activeQuest.track].quests[state.questIndex]);
 }
 
 async function copyReward(trackName, button) {
