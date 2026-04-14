@@ -118,7 +118,7 @@ function renderTrack(trackName) {
 
   if (!quest) {
     return `
-      <article class="quest-card ${trackName}">
+      <article class="quest-card ${trackName} ${isActive ? "active-quest" : ""}">
         <div class="track-head">
           <h2>${escapeHtml(trackData.title)}</h2>
           <p>${escapeHtml(trackData.subtitle)}</p>
