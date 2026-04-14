@@ -148,7 +148,10 @@ function renderTrack(trackName) {
         <ol class="objectives">
           ${quest.objectives.map((objective) => `<li>${escapeHtml(objective)}</li>`).join("")}
         </ol>
-        <div class="hint"><strong>Hint:</strong> ${escapeHtml(quest.hint)}</div>
+        <details class="hint">
+          <summary>How To Do It</summary>
+          <p>${escapeHtml(quest.hint)}</p>
+        </details>
         <div class="reward"><strong>Reward:</strong> ${escapeHtml(quest.reward)}</div>
         <div class="commands">
           <strong>Reward Command</strong>

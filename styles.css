@@ -413,6 +413,28 @@ input:focus {
 }
 
 .hint { background: rgba(54, 89, 71, 0.28); }
+.hint summary {
+  cursor: pointer;
+  color: #e8f0dd;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  list-style: none;
+  text-transform: uppercase;
+}
+.hint summary::-webkit-details-marker { display: none; }
+.hint summary::before {
+  content: "+";
+  display: inline-block;
+  margin-right: 0.5rem;
+  color: var(--gold);
+  font-weight: 900;
+}
+.hint[open] summary::before { content: "-"; }
+.hint p {
+  margin: 0.75rem 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
 .reward { background: rgba(199, 167, 91, 0.16); }
 .commands { background: rgba(11, 12, 11, 0.58); }
 .commands pre {
