@@ -314,10 +314,9 @@ function playQuestSound(leveledUp) {
     return;
   }
 
-  [293.66, 369.99, 440, 554.37].forEach((frequency, index) => {
-    playPluckedTone(context, frequency, now + index * 0.075);
+  [523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => {
+    playTootTone(context, frequency, now + index * 0.105, index === 3 ? 0.34 : 0.18);
   });
-  playBellTone(context, 880, now + 0.27, 0.28, 0.055);
 }
 
 function playBellTone(context, frequency, start, duration, peak = 0.16) {
@@ -364,6 +363,32 @@ function playPluckedTone(context, frequency, start) {
   oscillator.stop(start + 0.25);
 }
 
+function playTootTone(context, frequency, start, duration) {
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  const filter = context.createBiquadFilter();
+
+  oscillator.type = "square";
+  oscillator.frequency.setValueAtTime(frequency, start);
+  oscillator.frequency.setValueAtTime(frequency * 1.01, start + 0.035);
+  oscillator.frequency.setValueAtTime(frequency, start + 0.07);
+
+  filter.type = "lowpass";
+  filter.frequency.setValueAtTime(1250, start);
+  filter.Q.setValueAtTime(7, start);
+
+  gain.gain.setValueAtTime(0.0001, start);
+  gain.gain.exponentialRampToValueAtTime(0.075, start + 0.012);
+  gain.gain.setValueAtTime(0.075, start + duration * 0.45);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+  oscillator.connect(filter);
+  filter.connect(gain);
+  gain.connect(context.destination);
+  oscillator.start(start);
+  oscillator.stop(start + duration + 0.03);
+}
+
 function launchCelebration(leveledUp, triggerElement) {
   const burst = document.createElement("div");
   burst.className = `celebration-burst ${leveledUp ? "level-up" : ""}`;
@@ -375,11 +400,11 @@ function launchCelebration(leveledUp, triggerElement) {
     burst.style.top = `${rect.top + rect.height / 2}px`;
   }
 
-  const count = leveledUp ? 48 : 28;
+  const count = leveledUp ? 48 : 54;
   for (let index = 0; index < count; index += 1) {
     const spark = document.createElement("span");
     const angle = (Math.PI * 2 * index) / count;
-    const distance = leveledUp ? 220 + Math.random() * 120 : 65 + Math.random() * 75;
+    const distance = leveledUp ? 220 + Math.random() * 120 : 150 + Math.random() * 140;
     spark.style.setProperty("--x", `${Math.cos(angle) * distance}px`);
     spark.style.setProperty("--y", `${Math.sin(angle) * distance}px`);
     spark.style.setProperty("--spin", `${Math.random() * 540 - 270}deg`);
