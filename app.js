@@ -8,6 +8,8 @@ const QUEST_ACTIVATION_SOUND_START = 2.5;
 const QUEST_ACTIVATION_SOUND_END = 3.5;
 const QUEST_COMPLETE_SOUND_START = 4.3;
 const QUEST_COMPLETE_SOUND_END = 4.9;
+const PAGE_ENTRY_SOUND = "skairin.mp3";
+const LEVEL_UP_SOUND = "42dfb7_skyrim_level_up_sound_effect.mp3";
 
 const gate = document.querySelector("#gate");
 const app = document.querySelector("#app");
@@ -22,6 +24,7 @@ const currentFocusEl = document.querySelector("#current-focus");
 const exportButton = document.querySelector("#export-save");
 const importInput = document.querySelector("#import-save");
 const resetButton = document.querySelector("#reset-save");
+const mainTitle = document.querySelector("#main-title");
 
 let save = loadSave();
 let audioContext;
@@ -29,6 +32,9 @@ let activationAudio;
 let activationAudioStopTimer;
 let completionAudio;
 let completionAudioStopTimer;
+let pageEntryAudio;
+let levelUpAudio;
+let pageEntryPlayed = false;
 
 function defaultSave() {
   const tracks = {};
@@ -94,6 +100,7 @@ function unlock() {
   gate.classList.add("hidden");
   app.classList.remove("hidden");
   render();
+  playPageEntrySound();
 }
 
 function isUnlocked() {
@@ -165,7 +172,14 @@ function renderTrack(trackName) {
         <div class="reward"><strong>Reward:</strong> ${escapeHtml(quest.reward)}</div>
         <div class="commands">
           <strong>Reward Command</strong>
-          <pre>${escapeHtml(quest.commands.join("\n"))}</pre>
+          <div class="command-list">
+            ${quest.commands.map((command) => `
+              <div class="command-row">
+                <code>${escapeHtml(command)}</code>
+                <button type="button" data-action="copy-command" data-command="${escapeHtml(command)}">Copy</button>
+              </div>
+            `).join("")}
+          </div>
         </div>
         <div class="quest-actions">
           ${renderPrimaryAction(trackName, isActive, isLocked)}
@@ -232,10 +246,26 @@ function renderHistory() {
     .reverse()
     .slice(0, 12)
     .map((entry) => `
-      <div class="history-item">
-        <strong>${escapeHtml(entry.trackTitle)}: ${escapeHtml(entry.questTitle)}</strong>
-        <p>${new Date(entry.completedAt).toLocaleString()} - Reward: ${escapeHtml(entry.reward)}</p>
-      </div>
+      <details class="history-item">
+        <summary>
+          <strong>${escapeHtml(entry.trackTitle)}: ${escapeHtml(entry.questTitle)}</strong>
+          <span>${new Date(entry.completedAt).toLocaleString()}</span>
+        </summary>
+        <div class="history-detail">
+          <p>${escapeHtml(entry.description || "No description saved for this older chronicle entry.")}</p>
+          ${Array.isArray(entry.objectives) ? `
+            <ol>
+              ${entry.objectives.map((objective) => `<li>${escapeHtml(objective)}</li>`).join("")}
+            </ol>
+          ` : ""}
+          <div><strong>Reward:</strong> ${escapeHtml(entry.reward)}</div>
+          ${Array.isArray(entry.commands) ? `
+            <div class="history-commands">
+              ${entry.commands.map((command) => `<code>${escapeHtml(command)}</code>`).join("")}
+            </div>
+          ` : ""}
+        </div>
+      </details>
     `)
     .join("");
 }
@@ -248,6 +278,11 @@ tracksEl.addEventListener("click", async (event) => {
   if (action === "activate") activateQuest(trackName);
   if (action === "complete") completeQuest(trackName, button);
   if (action === "copy") await copyReward(trackName, button);
+  if (action === "copy-command") await copySingleCommand(button);
+});
+
+mainTitle.addEventListener("click", () => {
+  launchDragon();
 });
 
 function activateQuest(trackName) {
@@ -323,6 +358,42 @@ function getSegmentAudio(isActivation) {
   return completionAudio;
 }
 
+function playPageEntrySound() {
+  if (pageEntryPlayed) return;
+  pageEntryPlayed = true;
+
+  if (!pageEntryAudio) {
+    pageEntryAudio = new Audio(PAGE_ENTRY_SOUND);
+    pageEntryAudio.preload = "auto";
+  }
+
+  pageEntryAudio.currentTime = 0;
+  pageEntryAudio.volume = 0.72;
+  const playPromise = pageEntryAudio.play();
+  if (playPromise) {
+    playPromise.catch(() => {
+      // Browsers can block page-entry audio unless Danita has just clicked Enter.
+    });
+  }
+}
+
+function playLevelUpAudio() {
+  if (!levelUpAudio) {
+    levelUpAudio = new Audio(LEVEL_UP_SOUND);
+    levelUpAudio.preload = "auto";
+  }
+
+  levelUpAudio.pause();
+  levelUpAudio.currentTime = 0;
+  levelUpAudio.volume = 0.9;
+  const playPromise = levelUpAudio.play();
+  if (playPromise) {
+    playPromise.catch(() => {
+      // Keep the visual level-up effect even if the browser blocks audio.
+    });
+  }
+}
+
 function completeQuest(trackName, triggerElement) {
   const state = save.tracks[trackName];
   const trackData = QUESTS[trackName];
@@ -338,6 +409,9 @@ function completeQuest(trackName, triggerElement) {
   state.completed.push({
     title: quest.title,
     reward: quest.reward,
+    description: quest.description,
+    objectives: quest.objectives,
+    commands: quest.commands,
     completedAt: new Date().toISOString()
   });
   state.questIndex += 1;
@@ -346,7 +420,10 @@ function completeQuest(trackName, triggerElement) {
     track: trackName,
     trackTitle: trackData.title,
     questTitle: quest.title,
+    description: quest.description,
+    objectives: quest.objectives,
     reward: quest.reward,
+    commands: quest.commands,
     completedAt: new Date().toISOString()
   });
   persist();
@@ -369,15 +446,9 @@ function getAudioContext() {
 }
 
 function playQuestSound(leveledUp) {
-  const context = getAudioContext();
-  if (!context) return;
-
-  const now = context.currentTime;
   if (leveledUp) {
     playSegmentedAudio("complete");
-    [392, 523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => {
-      playBellTone(context, frequency, now + index * 0.095, 0.62);
-    });
+    playLevelUpAudio();
     return;
   }
 
@@ -497,6 +568,29 @@ function launchCelebration(leveledUp, effectOrigin) {
   window.setTimeout(() => burst.remove(), 1300);
 }
 
+function launchDragon() {
+  const existingDragon = document.querySelector(".dragon-flight");
+  if (existingDragon) existingDragon.remove();
+
+  const dragon = document.createElement("div");
+  dragon.className = "dragon-flight";
+  dragon.setAttribute("aria-hidden", "true");
+  dragon.innerHTML = `
+    <div class="dragon">
+      <span class="wing wing-left"></span>
+      <span class="wing wing-right"></span>
+      <span class="body"></span>
+      <span class="neck"></span>
+      <span class="head"></span>
+      <span class="tail"></span>
+      <span class="flame"></span>
+    </div>
+  `;
+
+  document.body.appendChild(dragon);
+  window.setTimeout(() => dragon.remove(), 5200);
+}
+
 function getEffectOrigin(element) {
   if (!element) return null;
   const rect = element.getBoundingClientRect();
@@ -543,6 +637,20 @@ async function copyReward(trackName, button) {
     button.textContent = "Copy Failed";
   }
   window.setTimeout(() => { button.textContent = original; }, 1400);
+}
+
+async function copySingleCommand(button) {
+  const command = button.dataset.command;
+  if (!command) return;
+
+  const original = button.textContent;
+  try {
+    await navigator.clipboard.writeText(command);
+    button.textContent = "Copied";
+  } catch {
+    button.textContent = "Failed";
+  }
+  window.setTimeout(() => { button.textContent = original; }, 1200);
 }
 
 exportButton.addEventListener("click", () => {
