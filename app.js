@@ -19,6 +19,7 @@ const importInput = document.querySelector("#import-save");
 const resetButton = document.querySelector("#reset-save");
 
 let save = loadSave();
+let audioContext;
 
 function defaultSave() {
   const tracks = {};
@@ -133,7 +134,7 @@ function renderTrack(trackName) {
   }
 
   return `
-    <article class="quest-card ${trackName}">
+    <article class="quest-card ${trackName} ${isActive ? "active-quest" : ""}">
       <div class="track-head">
         <h2>${escapeHtml(trackData.title)}</h2>
         <p>${escapeHtml(trackData.subtitle)}</p>
@@ -264,8 +265,10 @@ function completeQuest(trackName) {
   if (!quest) return;
   if (!isCurrentQuestActive(trackName)) return;
 
+  const previousLevel = state.level;
   state.xp += XP_PER_QUEST;
   state.level = calculateLevel(state.xp);
+  const leveledUp = state.level > previousLevel;
   state.completed.push({
     title: quest.title,
     reward: quest.reward,
@@ -282,6 +285,84 @@ function completeQuest(trackName) {
   });
   persist();
   render();
+  celebrateQuestCompletion(leveledUp);
+}
+
+function celebrateQuestCompletion(leveledUp) {
+  playQuestSound(leveledUp);
+  launchCelebration(leveledUp);
+}
+
+function getAudioContext() {
+  if (!audioContext) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+    audioContext = new AudioContextClass();
+  }
+  return audioContext;
+}
+
+function playQuestSound(leveledUp) {
+  const context = getAudioContext();
+  if (!context) return;
+
+  const now = context.currentTime;
+  const notes = leveledUp
+    ? [392, 523.25, 659.25, 783.99, 1046.5]
+    : [392, 493.88, 659.25];
+
+  notes.forEach((frequency, index) => {
+    playBellTone(context, frequency, now + index * 0.095, leveledUp ? 0.62 : 0.42);
+  });
+}
+
+function playBellTone(context, frequency, start, duration) {
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  const filter = context.createBiquadFilter();
+
+  oscillator.type = "triangle";
+  oscillator.frequency.setValueAtTime(frequency, start);
+  filter.type = "lowpass";
+  filter.frequency.setValueAtTime(2400, start);
+
+  gain.gain.setValueAtTime(0.0001, start);
+  gain.gain.exponentialRampToValueAtTime(0.16, start + 0.018);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+  oscillator.connect(filter);
+  filter.connect(gain);
+  gain.connect(context.destination);
+  oscillator.start(start);
+  oscillator.stop(start + duration + 0.04);
+}
+
+function launchCelebration(leveledUp) {
+  const burst = document.createElement("div");
+  burst.className = `celebration-burst ${leveledUp ? "level-up" : ""}`;
+  burst.setAttribute("aria-hidden", "true");
+
+  const count = leveledUp ? 48 : 28;
+  for (let index = 0; index < count; index += 1) {
+    const spark = document.createElement("span");
+    const angle = (Math.PI * 2 * index) / count;
+    const distance = leveledUp ? 220 + Math.random() * 120 : 140 + Math.random() * 90;
+    spark.style.setProperty("--x", `${Math.cos(angle) * distance}px`);
+    spark.style.setProperty("--y", `${Math.sin(angle) * distance}px`);
+    spark.style.setProperty("--spin", `${Math.random() * 540 - 270}deg`);
+    spark.style.animationDelay = `${Math.random() * 80}ms`;
+    spark.className = index % 3 === 0 ? "confetti" : "spark";
+    burst.appendChild(spark);
+  }
+
+  if (leveledUp) {
+    const label = document.createElement("strong");
+    label.textContent = "Level Up";
+    burst.appendChild(label);
+  }
+
+  document.body.appendChild(burst);
+  window.setTimeout(() => burst.remove(), 1300);
 }
 
 function isCurrentQuestActive(trackName) {
