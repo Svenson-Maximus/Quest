@@ -6,6 +6,8 @@ const XP_PER_QUEST = 100;
 const QUEST_ACTIVATION_SOUND = "minecraft-sound-effects-chest-sound-effect.mp3";
 const QUEST_ACTIVATION_SOUND_START = 2.5;
 const QUEST_ACTIVATION_SOUND_END = 3.5;
+const QUEST_COMPLETE_SOUND_START = 4.3;
+const QUEST_COMPLETE_SOUND_END = 4.9;
 
 const gate = document.querySelector("#gate");
 const app = document.querySelector("#app");
@@ -25,6 +27,8 @@ let save = loadSave();
 let audioContext;
 let activationAudio;
 let activationAudioStopTimer;
+let completionAudio;
+let completionAudioStopTimer;
 
 function defaultSave() {
   const tracks = {};
@@ -265,27 +269,58 @@ function activateQuest(trackName) {
 }
 
 function playQuestActivationSound() {
-  if (!activationAudio) {
-    activationAudio = new Audio(QUEST_ACTIVATION_SOUND);
-    activationAudio.preload = "auto";
+  playSegmentedAudio("activate");
+}
+
+function playSegmentedAudio(type) {
+  const isActivation = type === "activate";
+  const audio = getSegmentAudio(isActivation);
+  const start = isActivation ? QUEST_ACTIVATION_SOUND_START : QUEST_COMPLETE_SOUND_START;
+  const end = isActivation ? QUEST_ACTIVATION_SOUND_END : QUEST_COMPLETE_SOUND_END;
+
+  if (isActivation) {
+    window.clearTimeout(activationAudioStopTimer);
+  } else {
+    window.clearTimeout(completionAudioStopTimer);
   }
 
-  window.clearTimeout(activationAudioStopTimer);
-  activationAudio.pause();
-  activationAudio.currentTime = QUEST_ACTIVATION_SOUND_START;
-  activationAudio.volume = 0.85;
+  audio.pause();
+  audio.currentTime = start;
+  audio.volume = isActivation ? 0.85 : 0.9;
 
-  const playPromise = activationAudio.play();
+  const playPromise = audio.play();
   if (playPromise) {
     playPromise.catch(() => {
-      // Browsers may block audio if the activation did not count as a user gesture.
+      // Browsers may block audio if the click did not count as a user gesture.
     });
   }
 
-  activationAudioStopTimer = window.setTimeout(() => {
-    activationAudio.pause();
-    activationAudio.currentTime = QUEST_ACTIVATION_SOUND_START;
-  }, (QUEST_ACTIVATION_SOUND_END - QUEST_ACTIVATION_SOUND_START) * 1000);
+  const timer = window.setTimeout(() => {
+    audio.pause();
+    audio.currentTime = start;
+  }, (end - start) * 1000);
+
+  if (isActivation) {
+    activationAudioStopTimer = timer;
+  } else {
+    completionAudioStopTimer = timer;
+  }
+}
+
+function getSegmentAudio(isActivation) {
+  if (isActivation) {
+    if (!activationAudio) {
+      activationAudio = new Audio(QUEST_ACTIVATION_SOUND);
+      activationAudio.preload = "auto";
+    }
+    return activationAudio;
+  }
+
+  if (!completionAudio) {
+    completionAudio = new Audio(QUEST_ACTIVATION_SOUND);
+    completionAudio.preload = "auto";
+  }
+  return completionAudio;
 }
 
 function completeQuest(trackName, triggerElement) {
@@ -345,9 +380,7 @@ function playQuestSound(leveledUp) {
     return;
   }
 
-  [392, 523.25, 659.25, 783.99].forEach((frequency, index) => {
-    playTrumpetTone(context, frequency, now + index * 0.12, index === 3 ? 0.42 : 0.22);
-  });
+  playSegmentedAudio("complete");
 }
 
 function playBellTone(context, frequency, start, duration, peak = 0.16) {
