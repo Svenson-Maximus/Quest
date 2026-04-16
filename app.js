@@ -374,6 +374,7 @@ function playQuestSound(leveledUp) {
 
   const now = context.currentTime;
   if (leveledUp) {
+    playSegmentedAudio("complete");
     [392, 523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => {
       playBellTone(context, frequency, now + index * 0.095, 0.62);
     });
