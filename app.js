@@ -3,6 +3,9 @@ const SAVE_KEY = "danitas-quest-save-v1";
 const UNLOCK_KEY = "danitas-quest-unlocked";
 const TRACKS = ["building", "gathering", "pathfinder"];
 const XP_PER_QUEST = 100;
+const QUEST_ACTIVATION_SOUND = "minecraft-sound-effects-chest-sound-effect.mp3";
+const QUEST_ACTIVATION_SOUND_START = 2.5;
+const QUEST_ACTIVATION_SOUND_END = 3.5;
 
 const gate = document.querySelector("#gate");
 const app = document.querySelector("#app");
@@ -20,6 +23,8 @@ const resetButton = document.querySelector("#reset-save");
 
 let save = loadSave();
 let audioContext;
+let activationAudio;
+let activationAudioStopTimer;
 
 function defaultSave() {
   const tracks = {};
@@ -256,6 +261,31 @@ function activateQuest(trackName) {
   };
   persist();
   render();
+  playQuestActivationSound();
+}
+
+function playQuestActivationSound() {
+  if (!activationAudio) {
+    activationAudio = new Audio(QUEST_ACTIVATION_SOUND);
+    activationAudio.preload = "auto";
+  }
+
+  window.clearTimeout(activationAudioStopTimer);
+  activationAudio.pause();
+  activationAudio.currentTime = QUEST_ACTIVATION_SOUND_START;
+  activationAudio.volume = 0.85;
+
+  const playPromise = activationAudio.play();
+  if (playPromise) {
+    playPromise.catch(() => {
+      // Browsers may block audio if the activation did not count as a user gesture.
+    });
+  }
+
+  activationAudioStopTimer = window.setTimeout(() => {
+    activationAudio.pause();
+    activationAudio.currentTime = QUEST_ACTIVATION_SOUND_START;
+  }, (QUEST_ACTIVATION_SOUND_END - QUEST_ACTIVATION_SOUND_START) * 1000);
 }
 
 function completeQuest(trackName, triggerElement) {
