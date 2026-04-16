@@ -359,6 +359,22 @@ input:focus {
   margin-bottom: 0;
 }
 
+.track-image-button {
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  width: 82px;
+  height: 82px;
+}
+
+.track-image-button:hover,
+.track-image-button:active {
+  transform: none;
+  box-shadow: none;
+}
+
 .track-image {
   width: 82px;
   height: 82px;
@@ -368,6 +384,13 @@ input:focus {
   border-radius: 6px;
   background: rgba(0, 0, 0, 0.24);
   box-shadow: 0 0 18px rgba(199, 167, 91, 0.22), inset 0 0 0 1px rgba(0, 0, 0, 0.45);
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.track-image-button:hover .track-image {
+  border-color: #fff0aa;
+  box-shadow: 0 0 24px rgba(240, 216, 137, 0.38), inset 0 0 0 1px rgba(0, 0, 0, 0.45);
+  transform: translateY(-1px);
 }
 
 .track-stats {
@@ -821,6 +844,10 @@ input:focus {
 @media (max-width: 560px) {
   .password-row, .quest-actions { grid-template-columns: 1fr; }
   .track-image {
+    width: 66px;
+    height: 66px;
+  }
+  .track-image-button {
     width: 66px;
     height: 66px;
   }

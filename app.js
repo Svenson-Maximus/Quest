@@ -39,7 +39,6 @@ let completionAudio;
 let completionAudioStopTimer;
 let pageEntryAudio;
 let levelUpAudio;
-let pageEntryPlayed = false;
 
 function defaultSave() {
   const tracks = {};
@@ -105,7 +104,6 @@ function unlock() {
   gate.classList.add("hidden");
   app.classList.remove("hidden");
   render();
-  playPageEntrySound();
 }
 
 function isUnlocked() {
@@ -277,7 +275,9 @@ function renderTrackHeader(trackName, trackData, state, completedCount, totalCou
         <h2>${escapeHtml(trackData.title)}</h2>
         <p>${escapeHtml(trackData.subtitle)}</p>
       </div>
-      <img class="track-image" src="${TRACK_IMAGES[trackName]}" alt="${escapeHtml(trackData.title)} crest">
+      <button class="track-image-button" type="button" data-action="track-sound" aria-label="Play ${escapeHtml(trackData.title)} sound">
+        <img class="track-image" src="${TRACK_IMAGES[trackName]}" alt="${escapeHtml(trackData.title)} crest">
+      </button>
     </div>
     ${renderStats(state, completedCount, totalCount)}
   `;
@@ -291,6 +291,7 @@ tracksEl.addEventListener("click", async (event) => {
   if (action === "activate") activateQuest(trackName);
   if (action === "complete") completeQuest(trackName, button);
   if (action === "copy-command") await copySingleCommand(button);
+  if (action === "track-sound") playPageEntrySound();
 });
 
 mainTitle.addEventListener("click", () => {
@@ -371,9 +372,6 @@ function getSegmentAudio(isActivation) {
 }
 
 function playPageEntrySound() {
-  if (pageEntryPlayed) return;
-  pageEntryPlayed = true;
-
   if (!pageEntryAudio) {
     pageEntryAudio = new Audio(PAGE_ENTRY_SOUND);
     pageEntryAudio.preload = "auto";
@@ -651,6 +649,7 @@ async function copySingleCommand(button) {
 }
 
 exportButton.addEventListener("click", () => {
+  playPageEntrySound();
   const blob = new Blob([JSON.stringify(save, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
