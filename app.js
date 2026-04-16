@@ -3,6 +3,11 @@ const SAVE_KEY = "danitas-quest-save-v1";
 const UNLOCK_KEY = "danitas-quest-unlocked";
 const TRACKS = ["building", "gathering", "pathfinder"];
 const XP_PER_QUEST = 100;
+const TRACK_IMAGES = {
+  building: "builder.png",
+  gathering: "gatherer.png",
+  pathfinder: "pathfinder.png"
+};
 const QUEST_ACTIVATION_SOUND = "minecraft-sound-effects-chest-sound-effect.mp3";
 const QUEST_ACTIVATION_SOUND_START = 2.5;
 const QUEST_ACTIVATION_SOUND_END = 3.5;
@@ -137,9 +142,7 @@ function renderTrack(trackName) {
     return `
       <article class="quest-card ${trackName} ${isActive ? "active-quest" : ""}">
         <div class="track-head">
-          <h2>${escapeHtml(trackData.title)}</h2>
-          <p>${escapeHtml(trackData.subtitle)}</p>
-          ${renderStats(state, completedCount, totalCount)}
+          ${renderTrackHeader(trackName, trackData, state, completedCount, totalCount)}
         </div>
         <div class="finished">
           <h3>Path Complete</h3>
@@ -152,9 +155,7 @@ function renderTrack(trackName) {
   return `
     <article class="quest-card ${trackName} ${isActive ? "active-quest" : ""}">
       <div class="track-head">
-        <h2>${escapeHtml(trackData.title)}</h2>
-        <p>${escapeHtml(trackData.subtitle)}</p>
-        ${renderStats(state, completedCount, totalCount)}
+        ${renderTrackHeader(trackName, trackData, state, completedCount, totalCount)}
       </div>
       <div class="quest-body">
         <p class="quest-number">Quest ${state.questIndex + 1} of ${totalCount}</p>
@@ -183,7 +184,6 @@ function renderTrack(trackName) {
         </div>
         <div class="quest-actions">
           ${renderPrimaryAction(trackName, isActive, isLocked)}
-          <button type="button" data-action="copy" data-track="${trackName}">Copy Reward</button>
         </div>
       </div>
     </article>
@@ -270,6 +270,19 @@ function renderHistory() {
     .join("");
 }
 
+function renderTrackHeader(trackName, trackData, state, completedCount, totalCount) {
+  return `
+    <div class="track-title-row">
+      <div>
+        <h2>${escapeHtml(trackData.title)}</h2>
+        <p>${escapeHtml(trackData.subtitle)}</p>
+      </div>
+      <img class="track-image" src="${TRACK_IMAGES[trackName]}" alt="${escapeHtml(trackData.title)} crest">
+    </div>
+    ${renderStats(state, completedCount, totalCount)}
+  `;
+}
+
 tracksEl.addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-action]");
   if (!button) return;
@@ -277,7 +290,6 @@ tracksEl.addEventListener("click", async (event) => {
   const trackName = button.dataset.track;
   if (action === "activate") activateQuest(trackName);
   if (action === "complete") completeQuest(trackName, button);
-  if (action === "copy") await copyReward(trackName, button);
   if (action === "copy-command") await copySingleCommand(button);
 });
 
@@ -622,21 +634,6 @@ function isValidActiveQuest(activeQuest, candidateSave) {
   if (!TRACKS.includes(activeQuest.track)) return false;
   const state = candidateSave.tracks[activeQuest.track];
   return Boolean(state && state.questIndex === activeQuest.questIndex && QUESTS[activeQuest.track].quests[state.questIndex]);
-}
-
-async function copyReward(trackName, button) {
-  const state = save.tracks[trackName];
-  const quest = QUESTS[trackName].quests[state.questIndex];
-  if (!quest) return;
-
-  const original = button.textContent;
-  try {
-    await navigator.clipboard.writeText(quest.commands.join("\n"));
-    button.textContent = "Copied";
-  } catch {
-    button.textContent = "Copy Failed";
-  }
-  window.setTimeout(() => { button.textContent = original; }, 1400);
 }
 
 async function copySingleCommand(button) {

@@ -348,6 +348,28 @@ input:focus {
 
 .track-head p { color: rgba(255, 246, 221, 0.78); }
 
+.track-title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: start;
+}
+
+.track-title-row p {
+  margin-bottom: 0;
+}
+
+.track-image {
+  width: 82px;
+  height: 82px;
+  object-fit: contain;
+  object-position: center;
+  border: 2px solid rgba(240, 216, 137, 0.82);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.24);
+  box-shadow: 0 0 18px rgba(199, 167, 91, 0.22), inset 0 0 0 1px rgba(0, 0, 0, 0.45);
+}
+
 .track-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -487,7 +509,7 @@ input:focus {
 
 .quest-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 0.75rem;
   margin-top: 1rem;
 }
@@ -798,6 +820,10 @@ input:focus {
 
 @media (max-width: 560px) {
   .password-row, .quest-actions { grid-template-columns: 1fr; }
+  .track-image {
+    width: 66px;
+    height: 66px;
+  }
   .command-row { grid-template-columns: 1fr; }
   .track-stats { grid-template-columns: 1fr; }
   button, label.import-button {
