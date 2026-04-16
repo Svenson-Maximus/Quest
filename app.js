@@ -237,7 +237,7 @@ tracksEl.addEventListener("click", async (event) => {
   const action = button.dataset.action;
   const trackName = button.dataset.track;
   if (action === "activate") activateQuest(trackName);
-  if (action === "complete") completeQuest(trackName);
+  if (action === "complete") completeQuest(trackName, button);
   if (action === "copy") await copyReward(trackName, button);
 });
 
@@ -258,7 +258,7 @@ function activateQuest(trackName) {
   render();
 }
 
-function completeQuest(trackName) {
+function completeQuest(trackName, triggerElement) {
   const state = save.tracks[trackName];
   const trackData = QUESTS[trackName];
   const quest = trackData.quests[state.questIndex];
@@ -285,12 +285,12 @@ function completeQuest(trackName) {
   });
   persist();
   render();
-  celebrateQuestCompletion(leveledUp);
+  celebrateQuestCompletion(leveledUp, triggerElement);
 }
 
-function celebrateQuestCompletion(leveledUp) {
+function celebrateQuestCompletion(leveledUp, triggerElement) {
   playQuestSound(leveledUp);
-  launchCelebration(leveledUp);
+  launchCelebration(leveledUp, triggerElement);
 }
 
 function getAudioContext() {
@@ -307,16 +307,20 @@ function playQuestSound(leveledUp) {
   if (!context) return;
 
   const now = context.currentTime;
-  const notes = leveledUp
-    ? [392, 523.25, 659.25, 783.99, 1046.5]
-    : [392, 493.88, 659.25];
+  if (leveledUp) {
+    [392, 523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => {
+      playBellTone(context, frequency, now + index * 0.095, 0.62);
+    });
+    return;
+  }
 
-  notes.forEach((frequency, index) => {
-    playBellTone(context, frequency, now + index * 0.095, leveledUp ? 0.62 : 0.42);
+  [293.66, 369.99, 440, 554.37].forEach((frequency, index) => {
+    playPluckedTone(context, frequency, now + index * 0.075);
   });
+  playBellTone(context, 880, now + 0.27, 0.28, 0.055);
 }
 
-function playBellTone(context, frequency, start, duration) {
+function playBellTone(context, frequency, start, duration, peak = 0.16) {
   const oscillator = context.createOscillator();
   const gain = context.createGain();
   const filter = context.createBiquadFilter();
@@ -327,7 +331,7 @@ function playBellTone(context, frequency, start, duration) {
   filter.frequency.setValueAtTime(2400, start);
 
   gain.gain.setValueAtTime(0.0001, start);
-  gain.gain.exponentialRampToValueAtTime(0.16, start + 0.018);
+  gain.gain.exponentialRampToValueAtTime(peak, start + 0.018);
   gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
 
   oscillator.connect(filter);
@@ -337,16 +341,45 @@ function playBellTone(context, frequency, start, duration) {
   oscillator.stop(start + duration + 0.04);
 }
 
-function launchCelebration(leveledUp) {
+function playPluckedTone(context, frequency, start) {
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  const filter = context.createBiquadFilter();
+
+  oscillator.type = "sawtooth";
+  oscillator.frequency.setValueAtTime(frequency, start);
+  oscillator.frequency.exponentialRampToValueAtTime(frequency * 0.995, start + 0.18);
+  filter.type = "bandpass";
+  filter.frequency.setValueAtTime(frequency * 2.4, start);
+  filter.Q.setValueAtTime(5, start);
+
+  gain.gain.setValueAtTime(0.0001, start);
+  gain.gain.exponentialRampToValueAtTime(0.08, start + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.22);
+
+  oscillator.connect(filter);
+  filter.connect(gain);
+  gain.connect(context.destination);
+  oscillator.start(start);
+  oscillator.stop(start + 0.25);
+}
+
+function launchCelebration(leveledUp, triggerElement) {
   const burst = document.createElement("div");
   burst.className = `celebration-burst ${leveledUp ? "level-up" : ""}`;
   burst.setAttribute("aria-hidden", "true");
+
+  if (!leveledUp && triggerElement) {
+    const rect = triggerElement.getBoundingClientRect();
+    burst.style.left = `${rect.left + rect.width / 2}px`;
+    burst.style.top = `${rect.top + rect.height / 2}px`;
+  }
 
   const count = leveledUp ? 48 : 28;
   for (let index = 0; index < count; index += 1) {
     const spark = document.createElement("span");
     const angle = (Math.PI * 2 * index) / count;
-    const distance = leveledUp ? 220 + Math.random() * 120 : 140 + Math.random() * 90;
+    const distance = leveledUp ? 220 + Math.random() * 120 : 65 + Math.random() * 75;
     spark.style.setProperty("--x", `${Math.cos(angle) * distance}px`);
     spark.style.setProperty("--y", `${Math.sin(angle) * distance}px`);
     spark.style.setProperty("--spin", `${Math.random() * 540 - 270}deg`);
