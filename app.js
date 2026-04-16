@@ -265,6 +265,7 @@ function completeQuest(trackName, triggerElement) {
   if (!quest) return;
   if (!isCurrentQuestActive(trackName)) return;
 
+  const effectOrigin = getEffectOrigin(triggerElement);
   const previousLevel = state.level;
   state.xp += XP_PER_QUEST;
   state.level = calculateLevel(state.xp);
@@ -285,12 +286,12 @@ function completeQuest(trackName, triggerElement) {
   });
   persist();
   render();
-  celebrateQuestCompletion(leveledUp, triggerElement);
+  celebrateQuestCompletion(leveledUp, effectOrigin);
 }
 
-function celebrateQuestCompletion(leveledUp, triggerElement) {
+function celebrateQuestCompletion(leveledUp, effectOrigin) {
   playQuestSound(leveledUp);
-  launchCelebration(leveledUp, triggerElement);
+  launchCelebration(leveledUp, effectOrigin);
 }
 
 function getAudioContext() {
@@ -314,8 +315,8 @@ function playQuestSound(leveledUp) {
     return;
   }
 
-  [523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => {
-    playTootTone(context, frequency, now + index * 0.105, index === 3 ? 0.34 : 0.18);
+  [392, 523.25, 659.25, 783.99].forEach((frequency, index) => {
+    playTrumpetTone(context, frequency, now + index * 0.12, index === 3 ? 0.42 : 0.22);
   });
 }
 
@@ -363,41 +364,50 @@ function playPluckedTone(context, frequency, start) {
   oscillator.stop(start + 0.25);
 }
 
-function playTootTone(context, frequency, start, duration) {
+function playTrumpetTone(context, frequency, start, duration) {
   const oscillator = context.createOscillator();
+  const overtone = context.createOscillator();
   const gain = context.createGain();
+  const overtoneGain = context.createGain();
   const filter = context.createBiquadFilter();
 
-  oscillator.type = "square";
+  oscillator.type = "sawtooth";
+  overtone.type = "square";
   oscillator.frequency.setValueAtTime(frequency, start);
-  oscillator.frequency.setValueAtTime(frequency * 1.01, start + 0.035);
-  oscillator.frequency.setValueAtTime(frequency, start + 0.07);
+  overtone.frequency.setValueAtTime(frequency * 2, start);
+  oscillator.frequency.linearRampToValueAtTime(frequency * 1.015, start + 0.035);
+  oscillator.frequency.linearRampToValueAtTime(frequency, start + 0.08);
 
-  filter.type = "lowpass";
-  filter.frequency.setValueAtTime(1250, start);
-  filter.Q.setValueAtTime(7, start);
+  filter.type = "bandpass";
+  filter.frequency.setValueAtTime(frequency * 2.8, start);
+  filter.Q.setValueAtTime(2.8, start);
 
   gain.gain.setValueAtTime(0.0001, start);
-  gain.gain.exponentialRampToValueAtTime(0.075, start + 0.012);
-  gain.gain.setValueAtTime(0.075, start + duration * 0.45);
+  gain.gain.exponentialRampToValueAtTime(0.11, start + 0.025);
+  gain.gain.setValueAtTime(0.11, start + duration * 0.55);
   gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+  overtoneGain.gain.setValueAtTime(0.025, start);
+  overtoneGain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
 
   oscillator.connect(filter);
+  overtone.connect(overtoneGain);
+  overtoneGain.connect(filter);
   filter.connect(gain);
   gain.connect(context.destination);
   oscillator.start(start);
+  overtone.start(start);
   oscillator.stop(start + duration + 0.03);
+  overtone.stop(start + duration + 0.03);
 }
 
-function launchCelebration(leveledUp, triggerElement) {
+function launchCelebration(leveledUp, effectOrigin) {
   const burst = document.createElement("div");
   burst.className = `celebration-burst ${leveledUp ? "level-up" : ""}`;
   burst.setAttribute("aria-hidden", "true");
 
-  if (!leveledUp && triggerElement) {
-    const rect = triggerElement.getBoundingClientRect();
-    burst.style.left = `${rect.left + rect.width / 2}px`;
-    burst.style.top = `${rect.top + rect.height / 2}px`;
+  if (!leveledUp && effectOrigin) {
+    burst.style.left = `${effectOrigin.x}px`;
+    burst.style.top = `${effectOrigin.y}px`;
   }
 
   const count = leveledUp ? 48 : 54;
@@ -421,6 +431,15 @@ function launchCelebration(leveledUp, triggerElement) {
 
   document.body.appendChild(burst);
   window.setTimeout(() => burst.remove(), 1300);
+}
+
+function getEffectOrigin(element) {
+  if (!element) return null;
+  const rect = element.getBoundingClientRect();
+  return {
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2
+  };
 }
 
 function isCurrentQuestActive(trackName) {
