@@ -73,36 +73,36 @@ const REVIVAL_LEVEL_RITUALS = [
 
 const REVIVAL_ITEM_RITUALS = [
   {
-    title: "Rite of Empty Hands",
-    description: "Before reclaiming lost gear, perform a simple cleansing act so the return feels earned.",
+    title: "Ritual Book of Return",
+    description: "Before reclaiming lost gear, Danita must write the ritual words and a short memory of the death, then leave them on a lectern.",
     objectives: [
-      "Wash at a cauldron, water trough, or village well.",
-      "Place 1 candle or torch near the grave.",
-      "Return to the hall and open the creative recovery commands."
+      "Write in a book something for the ritual of return.",
+      "Add a small thought about the death and how it happened.",
+      "Place the written book on a lectern before opening the recovery commands."
     ],
-    hint: "This is optional. Use it only when Danita wants every item restored.",
+    hint: "Keep it short and personal. The important part is that the book records both the ritual and the memory of the death.",
     reward: "Creative restore commands."
   },
   {
-    title: "Circle of the Keeper",
-    description: "Walk a small memorial round before calling the lost pack home.",
+    title: "Ritual Book of Return",
+    description: "Before reclaiming lost gear, Danita must write the ritual words and a short memory of the death, then leave them on a lectern.",
     objectives: [
-      "Walk one slow circle around the grave or memorial.",
-      "Place 1 sign, banner, or flower naming the fallen journey.",
-      "Return to the revival window and claim the item recovery."
+      "Write in a book something for the ritual of return.",
+      "Add a small thought about the death and how it happened.",
+      "Place the written book on a lectern before opening the recovery commands."
     ],
-    hint: "Keep the gesture simple and symbolic.",
+    hint: "Keep it short and personal. The important part is that the book records both the ritual and the memory of the death.",
     reward: "Creative restore commands."
   },
   {
-    title: "Hearth Recall",
-    description: "Reconnect the lost tools to home with a short peaceful act inside the village.",
+    title: "Ritual Book of Return",
+    description: "Before reclaiming lost gear, Danita must write the ritual words and a short memory of the death, then leave them on a lectern.",
     objectives: [
-      "Stand in the main hall, house, or town square for a short moment.",
-      "Place 1 lantern, candle, or torch as a sign of return.",
-      "Open the item recovery commands only after the space feels settled again."
+      "Write in a book something for the ritual of return.",
+      "Add a small thought about the death and how it happened.",
+      "Place the written book on a lectern before opening the recovery commands."
     ],
-    hint: "No danger, no expedition, just a reset of the story.",
+    hint: "Keep it short and personal. The important part is that the book records both the ritual and the memory of the death.",
     reward: "Creative restore commands."
   }
 ];
