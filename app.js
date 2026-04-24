@@ -3,6 +3,7 @@ const SAVE_KEY = "danitas-quest-save-v1";
 const UNLOCK_KEY = "danitas-quest-unlocked";
 const TRACKS = ["building", "gathering", "pathfinder"];
 const XP_PER_QUEST = 100;
+const XP_BOTTLE_AVERAGE = 7;
 const TRACK_IMAGES = {
   building: "builder.png",
   gathering: "gatherer.png",
@@ -30,6 +31,81 @@ const exportButton = document.querySelector("#export-save");
 const importInput = document.querySelector("#import-save");
 const resetButton = document.querySelector("#reset-save");
 const mainTitle = document.querySelector("#main-title");
+const revivalButton = document.querySelector("#revival-button");
+const revivalModal = document.querySelector("#revival-modal");
+const revivalContent = document.querySelector("#revival-content");
+
+const REVIVAL_LEVEL_RITUALS = [
+  {
+    title: "Lantern of Returning Breath",
+    description: "Mark the grave, then perform a quiet rite to call lost strength back without chasing danger.",
+    objectives: [
+      "Place 4 candles, torches, or lanterns around the grave.",
+      "Stand at the headstone and leave 1 flower, sapling, or meaningful block.",
+      "Wait through 1 calm sunset or sunrise moment before claiming the rite complete."
+    ],
+    hint: "Keep it ceremonial and safe. This quest is about honoring the death, not earning the levels through risk again.",
+    reward: "Restored experience in flasks."
+  },
+  {
+    title: "Bell of the Second Dawn",
+    description: "Call the soul home with a small village rite instead of a dangerous march.",
+    objectives: [
+      "Visit the village bell or another central spot near the grave.",
+      "Ring the bell once and walk one full circle around the grave.",
+      "Place 1 candle, lantern, or flower to close the rite."
+    ],
+    hint: "This should take only a few minutes and keep Danita close to safety.",
+    reward: "Restored experience in flasks."
+  },
+  {
+    title: "Ash and Bread Offering",
+    description: "A small household ritual can be enough to call back lost knowledge.",
+    objectives: [
+      "Place 1 campfire, candle, or lantern near the grave.",
+      "Leave 1 bread, berry, or cooked food item in a chest or barrel beside it.",
+      "Read or place a short sign naming what was lost before closing the rite."
+    ],
+    hint: "Any peaceful symbolic offering works as long as it feels intentional.",
+    reward: "Restored experience in flasks."
+  }
+];
+
+const REVIVAL_ITEM_RITUALS = [
+  {
+    title: "Rite of Empty Hands",
+    description: "Before reclaiming lost gear, perform a simple cleansing act so the return feels earned.",
+    objectives: [
+      "Wash at a cauldron, water trough, or village well.",
+      "Place 1 candle or torch near the grave.",
+      "Return to the hall and open the creative recovery commands."
+    ],
+    hint: "This is optional. Use it only when Danita wants every item restored.",
+    reward: "Creative restore commands."
+  },
+  {
+    title: "Circle of the Keeper",
+    description: "Walk a small memorial round before calling the lost pack home.",
+    objectives: [
+      "Walk one slow circle around the grave or memorial.",
+      "Place 1 sign, banner, or flower naming the fallen journey.",
+      "Return to the revival window and claim the item recovery."
+    ],
+    hint: "Keep the gesture simple and symbolic.",
+    reward: "Creative restore commands."
+  },
+  {
+    title: "Hearth Recall",
+    description: "Reconnect the lost tools to home with a short peaceful act inside the village.",
+    objectives: [
+      "Stand in the main hall, house, or town square for a short moment.",
+      "Place 1 lantern, candle, or torch as a sign of return.",
+      "Open the item recovery commands only after the space feels settled again."
+    ],
+    hint: "No danger, no expedition, just a reset of the story.",
+    reward: "Creative restore commands."
+  }
+];
 
 let save = loadSave();
 let audioContext;
@@ -51,7 +127,8 @@ function defaultSave() {
     updatedAt: new Date().toISOString(),
     activeQuest: null,
     tracks,
-    history: []
+    history: [],
+    revival: defaultRevivalState()
   };
 }
 
@@ -72,7 +149,8 @@ function normalizeSave(candidate) {
     ...candidate,
     activeQuest: candidate.activeQuest || null,
     tracks: { ...base.tracks, ...(candidate.tracks || {}) },
-    history: Array.isArray(candidate.history) ? candidate.history : []
+    history: Array.isArray(candidate.history) ? candidate.history : [],
+    revival: normalizeRevivalState(candidate.revival)
   };
 
   TRACKS.forEach((track) => {
@@ -88,6 +166,61 @@ function normalizeSave(candidate) {
   }
 
   return merged;
+}
+
+function defaultRevivalState() {
+  return {
+    deathCount: 0,
+    current: null
+  };
+}
+
+function normalizeRevivalState(candidate) {
+  const base = defaultRevivalState();
+  if (!candidate || typeof candidate !== "object") {
+    return base;
+  }
+
+  return {
+    deathCount: Number.isFinite(candidate.deathCount) ? candidate.deathCount : base.deathCount,
+    current: normalizeRevivalJourney(candidate.current)
+  };
+}
+
+function normalizeRevivalJourney(candidate) {
+  if (!candidate || typeof candidate !== "object") {
+    return null;
+  }
+
+  return {
+    id: candidate.id || `revival-${Date.now()}`,
+    deathNumber: Number.isFinite(candidate.deathNumber) ? candidate.deathNumber : 1,
+    startedAt: candidate.startedAt || new Date().toISOString(),
+    graveBuilt: Boolean(candidate.graveBuilt),
+    levelQuest: normalizeRevivalQuest(candidate.levelQuest),
+    itemQuest: normalizeRevivalQuest(candidate.itemQuest),
+    previousLevel: Number.isFinite(candidate.previousLevel) ? candidate.previousLevel : null,
+    xpReward: candidate.xpReward && typeof candidate.xpReward === "object" ? {
+      totalXp: Number.isFinite(candidate.xpReward.totalXp) ? candidate.xpReward.totalXp : 0,
+      bottleCount: Number.isFinite(candidate.xpReward.bottleCount) ? candidate.xpReward.bottleCount : 0,
+      commands: Array.isArray(candidate.xpReward.commands) ? candidate.xpReward.commands : []
+    } : null
+  };
+}
+
+function normalizeRevivalQuest(candidate) {
+  if (!candidate || typeof candidate !== "object") {
+    return null;
+  }
+
+  return {
+    title: candidate.title || "Unnamed Rite",
+    description: candidate.description || "",
+    objectives: Array.isArray(candidate.objectives) ? candidate.objectives : [],
+    hint: candidate.hint || "",
+    reward: candidate.reward || "",
+    completed: Boolean(candidate.completed)
+  };
 }
 
 function persist() {
@@ -125,6 +258,7 @@ function render() {
   tracksEl.innerHTML = TRACKS.map(renderTrack).join("");
   renderSummary();
   renderHistory();
+  renderRevivalModal();
 }
 
 function renderTrack(trackName) {
@@ -283,6 +417,159 @@ function renderTrackHeader(trackName, trackData, state, completedCount, totalCou
   `;
 }
 
+function renderRevivalModal() {
+  const journey = save.revival.current;
+
+  if (!journey) {
+    revivalContent.innerHTML = `
+      <div class="modal-copy">
+        <p class="eyebrow">Revival Rites</p>
+        <h2 id="revival-title">Return After Death</h2>
+        <p>Press the rite below after a death. It starts a short symbolic recovery quest inside the village, with a grave first, then level restoration and optional item restoration.</p>
+      </div>
+      <div class="revival-actions">
+        <button type="button" data-action="start-revival">Begin Revival Rite</button>
+      </div>
+    `;
+    return;
+  }
+
+  const showNextRites = journey.graveBuilt;
+  const xpReward = renderXpReward(journey);
+
+  revivalContent.innerHTML = `
+    <div class="modal-copy">
+      <p class="eyebrow">Revival Rites</p>
+      <h2 id="revival-title">Death ${journey.deathNumber} Recovery</h2>
+      <p>The first task is always to build a grave in the village. Once that is checked, two peaceful rites open: one to reclaim levels, one optional rite to restore items.</p>
+    </div>
+
+    <article class="revival-card primary">
+      <div class="revival-card-head">
+        <span class="revival-step">Step 1</span>
+        <h3>Grave of the Fallen Journey</h3>
+      </div>
+      <p class="description">Raise a small grave or memorial in the village for this death before any revival reward is claimed.</p>
+      <ol class="objectives">
+        <li>Build a grave, cairn, or memorial marker inside the village.</li>
+        <li>Add at least 1 sign, flower, candle, torch, or other personal detail.</li>
+        <li>Place it somewhere Danita can revisit later as part of the story.</li>
+      </ol>
+      <div class="reward"><strong>Reward:</strong> The next revival rites unlock.</div>
+      <div class="quest-actions">
+        <button type="button" data-action="complete-grave" ${journey.graveBuilt ? "disabled" : ""}>${journey.graveBuilt ? "Grave Completed" : "Mark Grave Complete"}</button>
+      </div>
+    </article>
+
+    ${showNextRites ? renderRevivalQuestCard("level", journey.levelQuest, {
+      step: "Step 2",
+      buttonAction: "complete-level-rite",
+      buttonLabel: journey.levelQuest.completed ? "Level Rite Completed" : "Mark Level Rite Complete",
+      buttonDisabled: journey.levelQuest.completed
+    }) : ""}
+
+    ${showNextRites ? `
+      <article class="revival-card reward-card">
+        <div class="revival-card-head">
+          <span class="revival-step">Level Reward</span>
+          <h3>Restore Lost Levels</h3>
+        </div>
+        <p class="description">After finishing the rite, enter the level Danita had before the death. The reward generator will calculate the needed experience and prepare copy buttons.</p>
+        <label class="field-label" for="revival-level-input">Level Before Death</label>
+        <div class="level-reward-row">
+          <input id="revival-level-input" type="text" inputmode="numeric" value="${journey.previousLevel ?? ""}" placeholder="Example: 27">
+          <button type="button" data-action="generate-level-reward" ${journey.levelQuest.completed ? "" : "disabled"}>Create Reward</button>
+        </div>
+        <p class="helper-copy">Minecraft experience bottles are random, so the bottle count uses the usual average of 7 XP each. An exact XP command is included too.</p>
+        ${xpReward}
+      </article>
+    ` : ""}
+
+    ${showNextRites ? renderRevivalQuestCard("item", journey.itemQuest, {
+      step: "Optional",
+      buttonAction: "complete-item-rite",
+      buttonLabel: journey.itemQuest.completed ? "Item Rite Completed" : "Mark Item Rite Complete",
+      buttonDisabled: journey.itemQuest.completed,
+      badge: "Optional"
+    }) : ""}
+
+    ${showNextRites ? `
+      <article class="revival-card reward-card optional">
+        <div class="revival-card-head">
+          <span class="revival-step">Item Reward</span>
+          <h3>Restore All Items</h3>
+        </div>
+        <p class="description">This optional reward just gives the creative-mode swap commands so lost items can be replaced, then the game can be returned to survival.</p>
+        <div class="commands">
+          <strong>Recovery Commands</strong>
+          <div class="command-list">
+            ${[
+              "/gamemode creative @p",
+              "/gamemode survival @p"
+            ].map((command) => `
+              <div class="command-row">
+                <code>${escapeHtml(command)}</code>
+                <button type="button" data-action="copy-command" data-command="${escapeHtml(command)}" ${journey.itemQuest.completed ? "" : "disabled"}>Copy</button>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      </article>
+    ` : ""}
+
+    <div class="revival-actions">
+      <button type="button" data-action="start-revival">Start New Death Rite</button>
+    </div>
+  `;
+}
+
+function renderRevivalQuestCard(type, quest, options) {
+  return `
+    <article class="revival-card ${type === "item" ? "optional" : ""}">
+      <div class="revival-card-head">
+        <span class="revival-step">${escapeHtml(options.step)}</span>
+        <h3>${escapeHtml(quest.title)}${options.badge ? ` <span class="quest-badge">${escapeHtml(options.badge)}</span>` : ""}</h3>
+      </div>
+      <p class="description">${escapeHtml(quest.description)}</p>
+      <ol class="objectives">
+        ${quest.objectives.map((objective) => `<li>${escapeHtml(objective)}</li>`).join("")}
+      </ol>
+      <details class="hint">
+        <summary>How To Do It</summary>
+        <p>${escapeHtml(quest.hint)}</p>
+      </details>
+      <div class="reward"><strong>Reward:</strong> ${escapeHtml(quest.reward)}</div>
+      <div class="quest-actions">
+        <button type="button" data-action="${escapeHtml(options.buttonAction)}" ${options.buttonDisabled ? "disabled" : ""}>${escapeHtml(options.buttonLabel)}</button>
+      </div>
+    </article>
+  `;
+}
+
+function renderXpReward(journey) {
+  if (!journey.xpReward) {
+    return `<div class="reward-note">No level reward generated yet.</div>`;
+  }
+
+  return `
+    <div class="reward-note">
+      <strong>Total XP:</strong> ${journey.xpReward.totalXp}<br>
+      <strong>XP Bottles:</strong> ${journey.xpReward.bottleCount}
+    </div>
+    <div class="commands">
+      <strong>Reward Commands</strong>
+      <div class="command-list">
+        ${journey.xpReward.commands.map((command) => `
+          <div class="command-row">
+            <code>${escapeHtml(command)}</code>
+            <button type="button" data-action="copy-command" data-command="${escapeHtml(command)}">Copy</button>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
 tracksEl.addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-action]");
   if (!button) return;
@@ -294,9 +581,212 @@ tracksEl.addEventListener("click", async (event) => {
   if (action === "track-sound") playPageEntrySound();
 });
 
+revivalButton.addEventListener("click", () => {
+  openRevivalModal();
+});
+
+revivalModal.addEventListener("click", async (event) => {
+  const button = event.target.closest("button[data-action], .modal-backdrop[data-action]");
+  if (!button) return;
+
+  const action = button.dataset.action;
+  if (action === "close-revival") {
+    closeRevivalModal();
+    return;
+  }
+
+  if (action === "start-revival") {
+    startRevivalJourney();
+    return;
+  }
+
+  if (action === "complete-grave") {
+    completeGraveRite(button);
+    return;
+  }
+
+  if (action === "complete-level-rite") {
+    completeLevelRite(button);
+    return;
+  }
+
+  if (action === "complete-item-rite") {
+    completeItemRite(button);
+    return;
+  }
+
+  if (action === "generate-level-reward") {
+    generateLevelReward();
+    return;
+  }
+
+  if (action === "copy-command") {
+    await copySingleCommand(button);
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !revivalModal.classList.contains("hidden")) {
+    closeRevivalModal();
+  }
+});
+
 mainTitle.addEventListener("click", () => {
   launchDragon();
 });
+
+function openRevivalModal() {
+  if (!save.revival.current) {
+    startRevivalJourney();
+  }
+
+  revivalModal.classList.remove("hidden");
+  revivalModal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");
+  renderRevivalModal();
+}
+
+function closeRevivalModal() {
+  revivalModal.classList.add("hidden");
+  revivalModal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("modal-open");
+}
+
+function startRevivalJourney() {
+  const nextDeath = (save.revival.deathCount || 0) + 1;
+  save.revival.deathCount = nextDeath;
+  save.revival.current = createRevivalJourney(nextDeath);
+  persist();
+  render();
+  openRevivalModal();
+}
+
+function createRevivalJourney(deathNumber) {
+  return {
+    id: `revival-${Date.now()}`,
+    deathNumber,
+    startedAt: new Date().toISOString(),
+    graveBuilt: false,
+    levelQuest: createRevivalQuest(REVIVAL_LEVEL_RITUALS, deathNumber),
+    itemQuest: createRevivalQuest(REVIVAL_ITEM_RITUALS, deathNumber + 1),
+    previousLevel: null,
+    xpReward: null
+  };
+}
+
+function createRevivalQuest(pool, indexSeed) {
+  const template = pool[(indexSeed - 1) % pool.length];
+  return {
+    ...template,
+    objectives: [...template.objectives],
+    completed: false
+  };
+}
+
+function completeGraveRite(button) {
+  const journey = save.revival.current;
+  if (!journey || journey.graveBuilt) return;
+
+  journey.graveBuilt = true;
+  save.history.push({
+    track: "revival",
+    trackTitle: "Revival",
+    questTitle: "Grave of the Fallen Journey",
+    description: "A memorial grave was built in the village to begin the return after death.",
+    objectives: [
+      "Build the grave in the village.",
+      "Mark it with a personal sign, light, flower, or offering.",
+      "Open the next revival rites."
+    ],
+    reward: "The level and item rites are now available.",
+    commands: [],
+    completedAt: new Date().toISOString()
+  });
+  persist();
+  render();
+  celebrateQuestCompletion(false, getEffectOrigin(button));
+}
+
+function completeLevelRite(button) {
+  const journey = save.revival.current;
+  if (!journey || !journey.graveBuilt || journey.levelQuest.completed) return;
+
+  journey.levelQuest.completed = true;
+  persist();
+  render();
+  celebrateQuestCompletion(false, getEffectOrigin(button));
+}
+
+function completeItemRite(button) {
+  const journey = save.revival.current;
+  if (!journey || !journey.graveBuilt || journey.itemQuest.completed) return;
+
+  journey.itemQuest.completed = true;
+  save.history.push({
+    track: "revival",
+    trackTitle: "Revival",
+    questTitle: journey.itemQuest.title,
+    description: journey.itemQuest.description,
+    objectives: journey.itemQuest.objectives,
+    reward: "Creative recovery commands unlocked.",
+    commands: ["/gamemode creative @p", "/gamemode survival @p"],
+    completedAt: new Date().toISOString()
+  });
+  persist();
+  render();
+  celebrateQuestCompletion(false, getEffectOrigin(button));
+}
+
+function generateLevelReward() {
+  const journey = save.revival.current;
+  if (!journey || !journey.levelQuest.completed) return;
+
+  const input = document.querySelector("#revival-level-input");
+  const previousLevel = Number.parseInt(input?.value || "", 10);
+  if (!Number.isFinite(previousLevel) || previousLevel < 0) {
+    window.alert("Enter the level Danita had before death.");
+    return;
+  }
+
+  const totalXp = getTotalExperienceForLevel(previousLevel);
+  const bottleCount = Math.ceil(totalXp / XP_BOTTLE_AVERAGE);
+  journey.previousLevel = previousLevel;
+  journey.xpReward = {
+    totalXp,
+    bottleCount,
+    commands: [
+      ...buildBottleCommands(bottleCount),
+      `/experience add @p ${totalXp} points`
+    ]
+  };
+  persist();
+  render();
+}
+
+function buildBottleCommands(totalBottles) {
+  const commands = [];
+  let remaining = totalBottles;
+
+  while (remaining > 0) {
+    const stackSize = Math.min(remaining, 64);
+    commands.push(`/give @p experience_bottle ${stackSize}`);
+    remaining -= stackSize;
+  }
+
+  return commands;
+}
+
+function getTotalExperienceForLevel(level) {
+  if (level <= 16) {
+    return (level * level) + (6 * level);
+  }
+
+  if (level <= 31) {
+    return Math.round((2.5 * level * level) - (40.5 * level) + 360);
+  }
+
+  return Math.round((4.5 * level * level) - (162.5 * level) + 2220);
+}
 
 function activateQuest(trackName) {
   if (save.activeQuest) return;
@@ -667,6 +1157,7 @@ importInput.addEventListener("change", async () => {
     save = normalizeSave(JSON.parse(text));
     persist();
     render();
+    closeRevivalModal();
   } catch {
     alert("That save file could not be imported.");
   } finally {
@@ -679,6 +1170,7 @@ resetButton.addEventListener("click", () => {
   save = defaultSave();
   persist();
   render();
+  closeRevivalModal();
 });
 
 function escapeHtml(value) {

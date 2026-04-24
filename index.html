@@ -37,6 +37,9 @@
             <p class="intro">Te amo mi amor enjoy :) - booboo</p>
           </div>
           <div class="header-actions">
+            <button id="revival-button" type="button" class="icon-button revival-button" aria-label="Open revival rites">
+              <span aria-hidden="true">&#9760;</span>
+            </button>
             <button id="export-save" type="button">Export Save</button>
             <label class="import-button" for="import-save">Import Save</label>
             <input id="import-save" type="file" accept="application/json">
@@ -57,6 +60,14 @@
           <div id="history-list" class="history-list"></div>
         </section>
       </section>
+
+      <div id="revival-modal" class="modal-shell hidden" aria-hidden="true">
+        <div class="modal-backdrop" data-action="close-revival"></div>
+        <section class="modal-panel revival-panel" role="dialog" aria-modal="true" aria-labelledby="revival-title">
+          <button type="button" class="modal-close" data-action="close-revival" aria-label="Close revival rites">X</button>
+          <div id="revival-content"></div>
+        </section>
+      </div>
     </main>
 
     <script src="quests.js"></script>

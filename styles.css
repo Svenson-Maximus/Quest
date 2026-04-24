@@ -29,6 +29,10 @@ body {
   overflow-x: hidden;
 }
 
+body.modal-open {
+  overflow: hidden;
+}
+
 body::before {
   content: "";
   position: fixed;
@@ -263,6 +267,24 @@ input:focus {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.75rem;
+}
+
+.icon-button {
+  width: 58px;
+  min-width: 58px;
+  padding: 0.76rem 0;
+}
+
+.revival-button {
+  background: linear-gradient(180deg, #59483c, #231a18);
+  border-color: #d2af74;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 7px 0 #120d0c, 0 0 18px rgba(210, 175, 116, 0.2);
+}
+
+.revival-button span {
+  display: block;
+  font-size: 1.45rem;
+  line-height: 1;
 }
 
 #import-save {
@@ -596,6 +618,145 @@ input:focus {
   margin-top: 0.7rem;
 }
 
+.modal-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(7, 8, 8, 0.74);
+  backdrop-filter: blur(4px);
+}
+
+.modal-panel {
+  position: relative;
+  width: min(920px, 100%);
+  max-height: min(88vh, 1000px);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.05), transparent 28%),
+    rgba(18, 20, 19, 0.97);
+  box-shadow: var(--shadow), inset 0 0 0 2px rgba(0, 0, 0, 0.52);
+}
+
+.revival-panel {
+  padding: 1.2rem;
+}
+
+.modal-close {
+  position: sticky;
+  top: 0;
+  margin-left: auto;
+  display: block;
+  width: 50px;
+  min-width: 50px;
+  z-index: 2;
+}
+
+.modal-copy {
+  margin: 0 0 1rem;
+}
+
+.modal-copy h2 {
+  margin: 0;
+  font-size: clamp(1.7rem, 4vw, 2.6rem);
+}
+
+.revival-card {
+  border: 1px solid rgba(199, 167, 91, 0.55);
+  border-radius: 6px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.04), transparent 32%),
+    rgba(34, 37, 34, 0.88);
+  padding: 1rem;
+  margin-top: 1rem;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.22);
+}
+
+.revival-card.primary {
+  border-color: #f0d889;
+}
+
+.revival-card.optional {
+  border-color: rgba(184, 215, 216, 0.52);
+}
+
+.revival-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: baseline;
+}
+
+.revival-card-head h3 {
+  margin: 0;
+  color: #f4ead0;
+}
+
+.revival-step,
+.quest-badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(199, 167, 91, 0.5);
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  color: var(--gold);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.quest-badge {
+  margin-left: 0.45rem;
+  color: var(--frost);
+  border-color: rgba(184, 215, 216, 0.38);
+}
+
+.reward-card .commands {
+  margin-bottom: 0;
+}
+
+.field-label {
+  display: block;
+  margin-top: 0.9rem;
+  color: var(--gold);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.level-reward-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  margin-top: 0.45rem;
+}
+
+.helper-copy,
+.reward-note {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.reward-note {
+  margin-top: 0.9rem;
+}
+
+.revival-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.1rem;
+}
+
 .dragon-flight {
   position: fixed;
   left: -220px;
@@ -843,6 +1004,7 @@ input:focus {
 
 @media (max-width: 560px) {
   .password-row, .quest-actions { grid-template-columns: 1fr; }
+  .level-reward-row { grid-template-columns: 1fr; }
   .track-image {
     width: 66px;
     height: 66px;
@@ -856,5 +1018,11 @@ input:focus {
   button, label.import-button {
     width: 100%;
     text-align: center;
+  }
+  .icon-button {
+    width: 100%;
+  }
+  .revival-actions {
+    justify-content: stretch;
   }
 }
