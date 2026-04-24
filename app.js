@@ -5,9 +5,9 @@ const TRACKS = ["building", "gathering", "pathfinder"];
 const XP_PER_QUEST = 100;
 const XP_BOTTLE_AVERAGE = 7;
 const TRACK_IMAGES = {
-  building: "builder.png",
-  gathering: "gatherer.png",
-  pathfinder: "pathfinder.png"
+  building: "buildernew.png",
+  gathering: "gatherernew.png",
+  pathfinder: "pathfindernew.png"
 };
 const QUEST_ACTIVATION_SOUND = "minecraft-sound-effects-chest-sound-effect.mp3";
 const QUEST_ACTIVATION_SOUND_START = 2.5;
