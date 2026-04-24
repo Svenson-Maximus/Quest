@@ -147,7 +147,7 @@ function normalizeSave(candidate) {
   const merged = {
     ...base,
     ...candidate,
-    activeQuest: candidate.activeQuest || null,
+    activeQuest: normalizeActiveQuest(candidate.activeQuest),
     tracks: { ...base.tracks, ...(candidate.tracks || {}) },
     history: Array.isArray(candidate.history) ? candidate.history : [],
     revival: normalizeRevivalState(candidate.revival)
@@ -163,9 +163,26 @@ function normalizeSave(candidate) {
 
   if (!isValidActiveQuest(merged.activeQuest, merged)) {
     merged.activeQuest = null;
+  } else if (merged.activeQuest) {
+    const activeObjectives = QUESTS[merged.activeQuest.track].quests[merged.activeQuest.questIndex].objectives;
+    merged.activeQuest.objectiveProgress = normalizeObjectiveProgress(merged.activeQuest.objectiveProgress, activeObjectives);
   }
 
   return merged;
+}
+
+function normalizeActiveQuest(candidate) {
+  if (!candidate || typeof candidate !== "object") {
+    return null;
+  }
+
+  return {
+    track: candidate.track || "",
+    questIndex: Number.isFinite(candidate.questIndex) ? candidate.questIndex : 0,
+    title: candidate.title || "",
+    activatedAt: candidate.activatedAt || new Date().toISOString(),
+    objectiveProgress: Array.isArray(candidate.objectiveProgress) ? candidate.objectiveProgress : []
+  };
 }
 
 function defaultRevivalState() {
@@ -192,11 +209,18 @@ function normalizeRevivalJourney(candidate) {
     return null;
   }
 
+  const graveObjectives = [
+    "Build a grave, cairn, or memorial marker inside the village.",
+    "Add at least 1 sign, flower, candle, torch, or other personal detail.",
+    "Place it somewhere Danita can revisit later as part of the story."
+  ];
+
   return {
     id: candidate.id || `revival-${Date.now()}`,
     deathNumber: Number.isFinite(candidate.deathNumber) ? candidate.deathNumber : 1,
     startedAt: candidate.startedAt || new Date().toISOString(),
     graveBuilt: Boolean(candidate.graveBuilt),
+    graveProgress: normalizeObjectiveProgress(candidate.graveProgress, graveObjectives),
     levelQuest: normalizeRevivalQuest(candidate.levelQuest),
     itemQuest: normalizeRevivalQuest(candidate.itemQuest),
     previousLevel: Number.isFinite(candidate.previousLevel) ? candidate.previousLevel : null,
@@ -213,14 +237,63 @@ function normalizeRevivalQuest(candidate) {
     return null;
   }
 
+  const objectives = Array.isArray(candidate.objectives) ? candidate.objectives : [];
+
   return {
     title: candidate.title || "Unnamed Rite",
     description: candidate.description || "",
-    objectives: Array.isArray(candidate.objectives) ? candidate.objectives : [],
+    objectives,
     hint: candidate.hint || "",
     reward: candidate.reward || "",
-    completed: Boolean(candidate.completed)
+    completed: Boolean(candidate.completed),
+    objectiveProgress: normalizeObjectiveProgress(candidate.objectiveProgress, objectives)
   };
+}
+
+function normalizeObjectiveProgress(candidate, objectives) {
+  return objectives.map((_, index) => Boolean(Array.isArray(candidate) && candidate[index]));
+}
+
+function areObjectivesComplete(progress) {
+  return Array.isArray(progress) && progress.length > 0 && progress.every(Boolean);
+}
+
+function renderObjectiveList(objectives, options = {}) {
+  const {
+    checkboxes = false,
+    progress = [],
+    disabled = false,
+    action = "",
+    context = ""
+  } = options;
+
+  const className = checkboxes ? "objectives checklist" : "objectives";
+  return `
+    <ol class="${className}">
+      ${objectives.map((objective, index) => {
+        if (!checkboxes) {
+          return `<li>${escapeHtml(objective)}</li>`;
+        }
+
+        const checkboxId = `${context}-objective-${index}`;
+        return `
+          <li>
+            <label class="objective-check" for="${escapeHtml(checkboxId)}">
+              <input
+                id="${escapeHtml(checkboxId)}"
+                type="checkbox"
+                data-action="${escapeHtml(action)}"
+                data-index="${index}"
+                ${progress[index] ? "checked" : ""}
+                ${disabled ? "disabled" : ""}
+              >
+              <span>${escapeHtml(objective)}</span>
+            </label>
+          </li>
+        `;
+      }).join("")}
+    </ol>
+  `;
 }
 
 function persist() {
@@ -269,6 +342,7 @@ function renderTrack(trackName) {
   const totalCount = trackData.quests.length;
   const isActive = isCurrentQuestActive(trackName);
   const isLocked = Boolean(save.activeQuest) && !isActive;
+  const objectiveProgress = isActive ? save.activeQuest.objectiveProgress : [];
 
   if (!quest) {
     return `
@@ -295,9 +369,13 @@ function renderTrack(trackName) {
         ${renderQuestStatus(trackName, isActive, isLocked)}
         <p class="description">${escapeHtml(quest.description)}</p>
         <h4>Objectives</h4>
-        <ol class="objectives">
-          ${quest.objectives.map((objective) => `<li>${escapeHtml(objective)}</li>`).join("")}
-        </ol>
+        ${renderObjectiveList(quest.objectives, {
+          checkboxes: isActive,
+          progress: objectiveProgress,
+          disabled: !isActive,
+          action: "toggle-objective",
+          context: `${trackName}-${state.questIndex}`
+        })}
         <details class="hint">
           <summary>How To Do It</summary>
           <p>${escapeHtml(quest.hint)}</p>
@@ -337,7 +415,7 @@ function renderQuestStatus(trackName, isActive, isLocked) {
 
 function renderPrimaryAction(trackName, isActive, isLocked) {
   if (isActive) {
-    return `<button type="button" data-action="complete" data-track="${trackName}">Complete Active Quest</button>`;
+    return `<button type="button" data-action="complete" data-track="${trackName}" ${areObjectivesComplete(save.activeQuest.objectiveProgress) ? "" : "disabled"}>Complete Active Quest</button>`;
   }
 
   if (isLocked) {
@@ -450,14 +528,20 @@ function renderRevivalModal() {
         <h3>Grave of the Fallen Journey</h3>
       </div>
       <p class="description">Raise a small grave or memorial in the village for this death before any revival reward is claimed.</p>
-      <ol class="objectives">
-        <li>Build a grave, cairn, or memorial marker inside the village.</li>
-        <li>Add at least 1 sign, flower, candle, torch, or other personal detail.</li>
-        <li>Place it somewhere Danita can revisit later as part of the story.</li>
-      </ol>
+      ${renderObjectiveList([
+        "Build a grave, cairn, or memorial marker inside the village.",
+        "Add at least 1 sign, flower, candle, torch, or other personal detail.",
+        "Place it somewhere Danita can revisit later as part of the story."
+      ], {
+        checkboxes: true,
+        progress: journey.graveProgress,
+        disabled: journey.graveBuilt,
+        action: "toggle-grave-objective",
+        context: `${journey.id}-grave`
+      })}
       <div class="reward"><strong>Reward:</strong> The next revival rites unlock.</div>
       <div class="quest-actions">
-        <button type="button" data-action="complete-grave" ${journey.graveBuilt ? "disabled" : ""}>${journey.graveBuilt ? "Grave Completed" : "Mark Grave Complete"}</button>
+        <button type="button" data-action="complete-grave" ${(journey.graveBuilt || !areObjectivesComplete(journey.graveProgress)) ? "disabled" : ""}>${journey.graveBuilt ? "Grave Completed" : "Mark Grave Complete"}</button>
       </div>
     </article>
 
@@ -525,22 +609,26 @@ function renderRevivalModal() {
 
 function renderRevivalQuestCard(type, quest, options) {
   return `
-    <article class="revival-card ${type === "item" ? "optional" : ""}">
+    <article class="revival-card ${type === "item" ? "optional" : ""}" data-quest-type="${escapeHtml(type)}">
       <div class="revival-card-head">
         <span class="revival-step">${escapeHtml(options.step)}</span>
         <h3>${escapeHtml(quest.title)}${options.badge ? ` <span class="quest-badge">${escapeHtml(options.badge)}</span>` : ""}</h3>
       </div>
       <p class="description">${escapeHtml(quest.description)}</p>
-      <ol class="objectives">
-        ${quest.objectives.map((objective) => `<li>${escapeHtml(objective)}</li>`).join("")}
-      </ol>
+      ${renderObjectiveList(quest.objectives, {
+        checkboxes: true,
+        progress: quest.objectiveProgress,
+        disabled: quest.completed,
+        action: "toggle-revival-objective",
+        context: `${quest.title.replace(/\s+/g, "-").toLowerCase()}-${type}`
+      })}
       <details class="hint">
         <summary>How To Do It</summary>
         <p>${escapeHtml(quest.hint)}</p>
       </details>
       <div class="reward"><strong>Reward:</strong> ${escapeHtml(quest.reward)}</div>
       <div class="quest-actions">
-        <button type="button" data-action="${escapeHtml(options.buttonAction)}" ${options.buttonDisabled ? "disabled" : ""}>${escapeHtml(options.buttonLabel)}</button>
+        <button type="button" data-action="${escapeHtml(options.buttonAction)}" ${(options.buttonDisabled || !areObjectivesComplete(quest.objectiveProgress)) ? "disabled" : ""}>${escapeHtml(options.buttonLabel)}</button>
       </div>
     </article>
   `;
@@ -579,6 +667,18 @@ tracksEl.addEventListener("click", async (event) => {
   if (action === "complete") completeQuest(trackName, button);
   if (action === "copy-command") await copySingleCommand(button);
   if (action === "track-sound") playPageEntrySound();
+});
+
+tracksEl.addEventListener("change", (event) => {
+  const input = event.target.closest("input[type='checkbox'][data-action='toggle-objective']");
+  if (!input || !save.activeQuest) return;
+
+  const index = Number.parseInt(input.dataset.index, 10);
+  if (!Number.isFinite(index)) return;
+
+  save.activeQuest.objectiveProgress[index] = input.checked;
+  persist();
+  render();
 });
 
 revivalButton.addEventListener("click", () => {
@@ -625,6 +725,29 @@ revivalModal.addEventListener("click", async (event) => {
   }
 });
 
+revivalModal.addEventListener("change", (event) => {
+  const input = event.target.closest("input[type='checkbox'][data-action]");
+  if (!input || !save.revival.current) return;
+
+  const action = input.dataset.action;
+  const index = Number.parseInt(input.dataset.index, 10);
+  if (!Number.isFinite(index)) return;
+
+  if (action === "toggle-grave-objective") {
+    save.revival.current.graveProgress[index] = input.checked;
+  }
+
+  if (action === "toggle-revival-objective") {
+    const card = input.closest(".revival-card");
+    const isItemCard = card?.dataset.questType === "item";
+    const targetQuest = isItemCard ? save.revival.current.itemQuest : save.revival.current.levelQuest;
+    targetQuest.objectiveProgress[index] = input.checked;
+  }
+
+  persist();
+  renderRevivalModal();
+});
+
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !revivalModal.classList.contains("hidden")) {
     closeRevivalModal();
@@ -667,6 +790,7 @@ function createRevivalJourney(deathNumber) {
     deathNumber,
     startedAt: new Date().toISOString(),
     graveBuilt: false,
+    graveProgress: [false, false, false],
     levelQuest: createRevivalQuest(REVIVAL_LEVEL_RITUALS, deathNumber),
     itemQuest: createRevivalQuest(REVIVAL_ITEM_RITUALS, deathNumber + 1),
     previousLevel: null,
@@ -679,6 +803,7 @@ function createRevivalQuest(pool, indexSeed) {
   return {
     ...template,
     objectives: [...template.objectives],
+    objectiveProgress: template.objectives.map(() => false),
     completed: false
   };
 }
@@ -686,6 +811,7 @@ function createRevivalQuest(pool, indexSeed) {
 function completeGraveRite(button) {
   const journey = save.revival.current;
   if (!journey || journey.graveBuilt) return;
+  if (!areObjectivesComplete(journey.graveProgress)) return;
 
   journey.graveBuilt = true;
   save.history.push({
@@ -710,6 +836,7 @@ function completeGraveRite(button) {
 function completeLevelRite(button) {
   const journey = save.revival.current;
   if (!journey || !journey.graveBuilt || journey.levelQuest.completed) return;
+  if (!areObjectivesComplete(journey.levelQuest.objectiveProgress)) return;
 
   journey.levelQuest.completed = true;
   persist();
@@ -720,6 +847,7 @@ function completeLevelRite(button) {
 function completeItemRite(button) {
   const journey = save.revival.current;
   if (!journey || !journey.graveBuilt || journey.itemQuest.completed) return;
+  if (!areObjectivesComplete(journey.itemQuest.objectiveProgress)) return;
 
   journey.itemQuest.completed = true;
   save.history.push({
@@ -799,7 +927,8 @@ function activateQuest(trackName) {
     track: trackName,
     questIndex: state.questIndex,
     title: quest.title,
-    activatedAt: new Date().toISOString()
+    activatedAt: new Date().toISOString(),
+    objectiveProgress: quest.objectives.map(() => false)
   };
   persist();
   render();
@@ -900,6 +1029,7 @@ function completeQuest(trackName, triggerElement) {
   const quest = trackData.quests[state.questIndex];
   if (!quest) return;
   if (!isCurrentQuestActive(trackName)) return;
+  if (!areObjectivesComplete(save.activeQuest.objectiveProgress)) return;
 
   const effectOrigin = getEffectOrigin(triggerElement);
   const previousLevel = state.level;

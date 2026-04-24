@@ -123,7 +123,7 @@ button.danger {
   border-radius: 50%;
   background: rgba(238, 245, 239, 0.72);
   box-shadow: 0 0 12px rgba(184, 215, 216, 0.55);
-  animation: snow 16s linear infinite;
+  animation: snow 14s linear infinite;
 }
 
 .block-sky span:nth-child(1) { left: 6%; top: -4%; animation-duration: 19s; }
@@ -134,6 +134,10 @@ button.danger {
 .block-sky span:nth-child(6) { left: 80%; top: -5%; animation-duration: 26s; animation-delay: -7s; }
 .block-sky span:nth-child(7) { left: 92%; top: -9%; animation-duration: 20s; animation-delay: -13s; }
 .block-sky span:nth-child(8) { left: 12%; top: -12%; animation-duration: 28s; animation-delay: -15s; }
+.block-sky span:nth-child(9) { left: 26%; top: -11%; animation-duration: 18s; animation-delay: -4s; }
+.block-sky span:nth-child(10) { left: 43%; top: -7%; animation-duration: 22s; animation-delay: -10s; }
+.block-sky span:nth-child(11) { left: 61%; top: -13%; animation-duration: 17s; animation-delay: -6s; }
+.block-sky span:nth-child(12) { left: 75%; top: -10%; animation-duration: 24s; animation-delay: -14s; }
 
 @keyframes aurora {
   from { transform: translateX(-4%) skewX(-8deg); opacity: 0.68; }
@@ -481,6 +485,44 @@ input:focus {
   line-height: 1.45;
 }
 .objectives li { margin-bottom: 0.42rem; }
+
+.objectives.checklist {
+  list-style: none;
+  padding-left: 0;
+}
+
+.objective-check {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.7rem;
+  align-items: start;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid rgba(199, 167, 91, 0.28);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+}
+
+.objective-check input[type="checkbox"] {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0.08rem 0 0;
+  accent-color: #d9bc6d;
+  cursor: pointer;
+}
+
+.objective-check span {
+  color: #efe7d2;
+}
+
+.objective-check input[type="checkbox"]:checked + span {
+  color: #b6c9b3;
+  text-decoration: line-through;
+}
+
+.objective-check input[type="checkbox"]:disabled + span {
+  opacity: 0.78;
+}
 
 .hint, .reward, .commands {
   border: 1px solid rgba(199, 167, 91, 0.58);
