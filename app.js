@@ -34,6 +34,9 @@ const mainTitle = document.querySelector("#main-title");
 const revivalButton = document.querySelector("#revival-button");
 const revivalModal = document.querySelector("#revival-modal");
 const revivalContent = document.querySelector("#revival-content");
+const imageModal = document.querySelector("#image-modal");
+const imageModalTitle = document.querySelector("#image-modal-title");
+const imageModalPreview = document.querySelector("#image-modal-preview");
 
 const REVIVAL_LEVEL_RITUALS = [
   {
@@ -487,7 +490,7 @@ function renderTrackHeader(trackName, trackData, state, completedCount, totalCou
         <h2>${escapeHtml(trackData.title)}</h2>
         <p>${escapeHtml(trackData.subtitle)}</p>
       </div>
-      <button class="track-image-button" type="button" data-action="track-sound" aria-label="Play ${escapeHtml(trackData.title)} sound">
+      <button class="track-image-button" type="button" data-action="open-track-image" data-track="${escapeHtml(trackName)}" aria-label="View ${escapeHtml(trackData.title)} image larger">
         <img class="track-image" src="${TRACK_IMAGES[trackName]}" alt="${escapeHtml(trackData.title)} crest">
       </button>
     </div>
@@ -666,7 +669,7 @@ tracksEl.addEventListener("click", async (event) => {
   if (action === "activate") activateQuest(trackName);
   if (action === "complete") completeQuest(trackName, button);
   if (action === "copy-command") await copySingleCommand(button);
-  if (action === "track-sound") playPageEntrySound();
+  if (action === "open-track-image") openTrackImageModal(trackName);
 });
 
 tracksEl.addEventListener("change", (event) => {
@@ -748,7 +751,17 @@ revivalModal.addEventListener("change", (event) => {
   renderRevivalModal();
 });
 
+imageModal.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-action='close-image']");
+  if (!button) return;
+  closeImageModal();
+});
+
 document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !imageModal.classList.contains("hidden")) {
+    closeImageModal();
+  }
+
   if (event.key === "Escape" && !revivalModal.classList.contains("hidden")) {
     closeRevivalModal();
   }
@@ -765,14 +778,40 @@ function openRevivalModal() {
 
   revivalModal.classList.remove("hidden");
   revivalModal.setAttribute("aria-hidden", "false");
-  document.body.classList.add("modal-open");
+  syncBodyModalState();
   renderRevivalModal();
 }
 
 function closeRevivalModal() {
   revivalModal.classList.add("hidden");
   revivalModal.setAttribute("aria-hidden", "true");
-  document.body.classList.remove("modal-open");
+  syncBodyModalState();
+}
+
+function openTrackImageModal(trackName) {
+  const trackData = QUESTS[trackName];
+  const imageSrc = TRACK_IMAGES[trackName];
+  if (!trackData || !imageSrc) return;
+
+  imageModalTitle.textContent = trackData.title;
+  imageModalPreview.src = imageSrc;
+  imageModalPreview.alt = `${trackData.title} crest`;
+  imageModal.classList.remove("hidden");
+  imageModal.setAttribute("aria-hidden", "false");
+  syncBodyModalState();
+}
+
+function closeImageModal() {
+  imageModal.classList.add("hidden");
+  imageModal.setAttribute("aria-hidden", "true");
+  imageModalPreview.src = "";
+  imageModalPreview.alt = "";
+  syncBodyModalState();
+}
+
+function syncBodyModalState() {
+  const hasOpenModal = !revivalModal.classList.contains("hidden") || !imageModal.classList.contains("hidden");
+  document.body.classList.toggle("modal-open", hasOpenModal);
 }
 
 function startRevivalJourney() {
