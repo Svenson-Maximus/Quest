@@ -809,8 +809,8 @@ function renderPlayerCard() {
         <p class="eyebrow">Player Card</p>
         <h2>${escapeHtml(save.player)}</h2>
       </div>
-      <div class="player-level-medallion">Lv ${profile.playerLevel}</div>
     </div>
+    <div class="player-level-medallion card-corner">Lv ${profile.playerLevel}</div>
     <button type="button" class="profile-card-button" data-action="open-journey-map" aria-label="Open Danita's journey map">
       <img class="profile-card-image" src="${PROFILE_CARD_IMAGE}" alt="${escapeHtml(save.player)} profile card">
       <div class="profile-card-overlay">
@@ -831,7 +831,6 @@ function renderPlayerCard() {
       <p><strong>Strongest Path:</strong> ${escapeHtml(profile.strongestPath)}</p>
       <p><strong>Next Cosmetic:</strong> ${nextTitle ? `${escapeHtml(nextTitle.title)} at Lv ${nextTitle.level}` : "All titles unlocked"}</p>
     </div>
-    <p class="profile-card-hint">Tap the profile image to open the skill-tree journey view.</p>
   `;
 }
 
@@ -1029,6 +1028,8 @@ function renderStorySlider() {
 }
 
 function renderJourneyView() {
+  const profile = getPlayerProfile();
+  const nextTitle = PLAYER_TITLES.find((entry) => entry.level > profile.playerLevel);
   const journey = getJourneyMapData();
   journeyView.innerHTML = `
     <section class="journey-page">
@@ -1036,6 +1037,14 @@ function renderJourneyView() {
         <p class="eyebrow">Danita's Journey</p>
         <h2>Quest Skill Tree</h2>
         <p>The paths light up in the exact order the quests were completed, with each path drawn like its own Skyrim-style branch.</p>
+      </div>
+      <div class="journey-stats">
+        <p><strong>Overall Level:</strong> ${profile.playerLevel}</p>
+        <p><strong>Total XP:</strong> ${profile.totalXp}</p>
+        <p><strong>Quests Completed:</strong> ${profile.totalComplete}</p>
+        <p><strong>Highest Path Level:</strong> ${profile.highestPathLevel}</p>
+        <p><strong>Strongest Path:</strong> ${escapeHtml(profile.strongestPath)}</p>
+        <p><strong>Next Cosmetic:</strong> ${nextTitle ? `${escapeHtml(nextTitle.title)} at Lv ${nextTitle.level}` : "All titles unlocked"}</p>
       </div>
       <div class="journey-stage">
         ${journey.columns.map((column) => `
