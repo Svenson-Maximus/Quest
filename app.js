@@ -11,6 +11,7 @@ const TRACK_IMAGES = {
   pathfinder: "pathfindernew.png"
 };
 const PROFILE_CARD_IMAGE = "profilecard.png";
+const MEMORY_NOTE_KEY = "danitas-memory-notes-v1";
 const STORY_IMAGES = [
   {
     src: "storyimages/image.png",
@@ -50,13 +51,11 @@ const importInput = document.querySelector("#import-save");
 const resetButton = document.querySelector("#reset-save");
 const mainTitle = document.querySelector("#main-title");
 const danitaView = document.querySelector("#danita-view");
-const journeyView = document.querySelector("#journey-view");
 const boobooView = document.querySelector("#booboo-view");
 const menuToggle = document.querySelector("#menu-toggle");
 const headerActions = document.querySelector("#header-actions");
 const boobooViewButton = document.querySelector("#booboo-view-button");
 const danitaViewButton = document.querySelector("#danita-view-button");
-const journeyViewButton = document.querySelector("#journey-view-button");
 const revivalButton = document.querySelector("#revival-button");
 const wishButton = document.querySelector("#wish-button");
 const revivalModal = document.querySelector("#revival-modal");
@@ -65,6 +64,7 @@ const imageModal = document.querySelector("#image-modal");
 const imageModalTitle = document.querySelector("#image-modal-title");
 const imageModalPreview = document.querySelector("#image-modal-preview");
 const playerCardEl = document.querySelector("#player-card");
+const skillTreeCard = document.querySelector("#skill-tree-card");
 const wishBoardButton = document.querySelector("#wish-board-button");
 const wishListEl = document.querySelector("#wish-list");
 const wishModal = document.querySelector("#wish-modal");
@@ -158,6 +158,8 @@ let selectedBoobooWishId = null;
 let boobooUnlocked = false;
 let currentStoryIndex = 0;
 let menuOpen = false;
+let memoryNotes = loadMemoryNotes();
+let skillTreeAnimated = false;
 
 populateBlockSky();
 
@@ -495,13 +497,13 @@ passwordForm.addEventListener("submit", (event) => {
 function render() {
   tracksEl.innerHTML = TRACKS.map(renderTrack).join("");
   renderPlayerCard();
+  renderSkillTreeCard();
   renderWishBoard();
   renderBoobooView();
   renderHistory();
   renderStorySlider();
   renderRevivalModal();
   renderWishModal();
-  renderJourneyView();
   syncViewState();
 }
 
@@ -685,14 +687,11 @@ function renderApprovedItemRow(entry, index) {
 
 function syncViewState() {
   const showDanita = currentView === "danita";
-  const showJourney = currentView === "journey";
   const showBooboo = currentView === "booboo";
 
   danitaView.classList.toggle("hidden", !showDanita);
-  journeyView.classList.toggle("hidden", !showJourney);
   boobooView.classList.toggle("hidden", !showBooboo);
   danitaViewButton.classList.toggle("hidden", showDanita);
-  journeyViewButton.classList.toggle("hidden", showJourney);
   boobooViewButton.classList.toggle("hidden", showBooboo);
   headerActions.classList.toggle("hidden", !menuOpen);
   menuToggle.setAttribute("aria-expanded", String(menuOpen));
@@ -811,13 +810,13 @@ function renderPlayerCard() {
       </div>
     </div>
     <div class="player-level-medallion card-corner">Lv ${profile.playerLevel}</div>
-    <button type="button" class="profile-card-button" data-action="open-journey-map" aria-label="Open Danita's journey map">
+    <div class="profile-card-button">
       <img class="profile-card-image" src="${PROFILE_CARD_IMAGE}" alt="${escapeHtml(save.player)} profile card">
       <div class="profile-card-overlay">
         <strong>${escapeHtml(save.player)}</strong>
-        <span>Open Skill Tree</span>
+        <span>Danita</span>
       </div>
-    </button>
+    </div>
     <div class="player-card-caption">
       <p class="eyebrow">Current Cosmetic Title</p>
       <strong>${escapeHtml(profile.currentTitle.title)}</strong>
@@ -1012,41 +1011,51 @@ function renderStorySlider() {
   }
 
   currentStoryIndex = Math.max(0, Math.min(currentStoryIndex, STORY_IMAGES.length - 1));
+  const currentImage = STORY_IMAGES[currentStoryIndex];
+  const currentNote = memoryNotes[currentImage.src] || "";
   storyCounter.textContent = `${currentStoryIndex + 1} / ${STORY_IMAGES.length}`;
   storySlider.innerHTML = `
     <button type="button" class="story-nav secondary" data-action="story-prev" ${STORY_IMAGES.length > 1 ? "" : "disabled"} aria-label="Previous story image">&larr;</button>
-    <div class="story-slide-shell">
-      ${STORY_IMAGES.map((image, index) => `
-        <figure class="story-slide ${index === currentStoryIndex ? "active" : ""}">
-          <img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.title)}">
-          <figcaption>${escapeHtml(image.title)}</figcaption>
-        </figure>
-      `).join("")}
+    <div class="story-memory-layout">
+      <div class="story-slide-shell">
+        ${STORY_IMAGES.map((image, index) => `
+          <figure class="story-slide ${index === currentStoryIndex ? "active" : ""}">
+            <img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.title)}">
+            <figcaption>${escapeHtml(image.title)}</figcaption>
+          </figure>
+        `).join("")}
+      </div>
+      <aside class="memory-note-card">
+        <p class="eyebrow">Quick Note</p>
+        <label class="field-label" for="memory-note">Memory Note</label>
+        <textarea id="memory-note" class="memory-note-input" data-action="memory-note" rows="10" placeholder="Write a quick memory about this image...">${escapeHtml(currentNote)}</textarea>
+      </aside>
     </div>
     <button type="button" class="story-nav secondary" data-action="story-next" ${STORY_IMAGES.length > 1 ? "" : "disabled"} aria-label="Next story image">&rarr;</button>
   `;
 }
 
-function renderJourneyView() {
+function renderSkillTreeCard() {
   const profile = getPlayerProfile();
   const nextTitle = PLAYER_TITLES.find((entry) => entry.level > profile.playerLevel);
   const journey = getJourneyMapData();
-  journeyView.innerHTML = `
-    <section class="journey-page">
-      <div class="journey-copy">
-        <p class="eyebrow">Danita's Journey</p>
-        <h2>Quest Skill Tree</h2>
-        <p>The paths light up in the exact order the quests were completed, with each path drawn like its own Skyrim-style branch.</p>
-      </div>
-      <div class="journey-stats">
-        <p><strong>Overall Level:</strong> ${profile.playerLevel}</p>
-        <p><strong>Total XP:</strong> ${profile.totalXp}</p>
-        <p><strong>Quests Completed:</strong> ${profile.totalComplete}</p>
-        <p><strong>Highest Path Level:</strong> ${profile.highestPathLevel}</p>
-        <p><strong>Strongest Path:</strong> ${escapeHtml(profile.strongestPath)}</p>
-        <p><strong>Next Cosmetic:</strong> ${nextTitle ? `${escapeHtml(nextTitle.title)} at Lv ${nextTitle.level}` : "All titles unlocked"}</p>
-      </div>
-      <div class="journey-stage">
+  if (!skillTreeCard) return;
+
+  skillTreeCard.innerHTML = `
+    <div class="journey-copy">
+      <p class="eyebrow">Danita's Journey</p>
+      <h2>Quest Skill Tree</h2>
+      <p>The branches stay here beside the player card. Use the button to replay the progress animation.</p>
+    </div>
+    <div class="journey-stats">
+      <p><strong>Overall Level:</strong> ${profile.playerLevel}</p>
+      <p><strong>Total XP:</strong> ${profile.totalXp}</p>
+      <p><strong>Quests Completed:</strong> ${profile.totalComplete}</p>
+      <p><strong>Highest Path Level:</strong> ${profile.highestPathLevel}</p>
+      <p><strong>Strongest Path:</strong> ${escapeHtml(profile.strongestPath)}</p>
+      <p><strong>Next Cosmetic:</strong> ${nextTitle ? `${escapeHtml(nextTitle.title)} at Lv ${nextTitle.level}` : "All titles unlocked"}</p>
+    </div>
+    <div class="journey-stage ${skillTreeAnimated ? "animated" : ""}">
         ${journey.columns.map((column) => `
           <div class="journey-track-label top" style="--x:${column.x};">
             <strong>${escapeHtml(column.title)}</strong>
@@ -1073,9 +1082,11 @@ function renderJourneyView() {
             aria-label="${escapeHtml(node.label)}"
           ></div>
         `).join("")}
-      </div>
-      ${journey.completedCount ? "" : "<p class=\"journey-empty\">No completed quests yet. Finish a quest and the first branch will appear here.</p>"}
-    </section>
+    </div>
+    <div class="skill-tree-actions">
+      <button type="button" data-action="play-skill-tree" ${journey.completedCount ? "" : "disabled"}>Play Progress Animation</button>
+    </div>
+    ${journey.completedCount ? "" : "<p class=\"journey-empty\">No completed quests yet. Finish a quest and the first branch will appear here.</p>"}
   `;
 }
 
@@ -1173,14 +1184,44 @@ function getJourneyMapData() {
   };
 }
 
-function getJourneyPathLength(points) {
-  let total = 0;
-  for (let index = 1; index < points.length; index += 1) {
-    const dx = points[index].x - points[index - 1].x;
-    const dy = points[index].y - points[index - 1].y;
-    total += Math.sqrt((dx * dx) + (dy * dy));
+function loadMemoryNotes() {
+  try {
+    const raw = localStorage.getItem(MEMORY_NOTE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
   }
-  return total;
+}
+
+function persistMemoryNotes() {
+  localStorage.setItem(MEMORY_NOTE_KEY, JSON.stringify(memoryNotes, null, 2));
+}
+
+function playSkillTreeAnimation() {
+  if (!skillTreeCard) return;
+  skillTreeAnimated = false;
+  renderSkillTreeCard();
+  window.requestAnimationFrame(() => {
+    skillTreeAnimated = true;
+    renderSkillTreeCard();
+  });
+}
+
+function launchLevelUpDance() {
+  const existing = document.querySelector(".level-up-dance");
+  if (existing) existing.remove();
+
+  const dance = document.createElement("div");
+  dance.className = "level-up-dance";
+  dance.setAttribute("aria-hidden", "true");
+  dance.innerHTML = `
+    <img src="danitadance.gif" alt="">
+    <strong>Level Up</strong>
+  `;
+  document.body.appendChild(dance);
+  window.setTimeout(() => dance.remove(), 7000);
 }
 
 function renderTrackHeader(trackName, trackData, state, completedCount, totalCount) {
@@ -1408,12 +1449,6 @@ danitaViewButton.addEventListener("click", () => {
   render();
 });
 
-journeyViewButton.addEventListener("click", () => {
-  currentView = "journey";
-  menuOpen = false;
-  render();
-});
-
 wishButton.addEventListener("click", () => {
   menuOpen = false;
   syncViewState();
@@ -1445,12 +1480,18 @@ storySlider.addEventListener("click", (event) => {
   }
 });
 
-playerCardEl.addEventListener("click", (event) => {
-  const button = event.target.closest("button[data-action='open-journey-map']");
+storySlider.addEventListener("input", (event) => {
+  const input = event.target.closest("textarea[data-action='memory-note']");
+  if (!input) return;
+  const currentImage = STORY_IMAGES[currentStoryIndex];
+  memoryNotes[currentImage.src] = input.value;
+  persistMemoryNotes();
+});
+
+skillTreeCard.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-action='play-skill-tree']");
   if (!button) return;
-  currentView = "journey";
-  menuOpen = false;
-  render();
+  playSkillTreeAnimation();
 });
 
 revivalModal.addEventListener("click", async (event) => {
@@ -2263,6 +2304,7 @@ function playQuestSound(leveledUp) {
   if (leveledUp) {
     playSegmentedAudio("complete");
     playLevelUpAudio();
+    launchLevelUpDance();
     return;
   }
 

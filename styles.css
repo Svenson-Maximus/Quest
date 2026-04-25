@@ -266,20 +266,16 @@ textarea:focus {
 }
 
 .app-header {
-  display: block;
-  padding: clamp(1rem, 4vw, 2rem) 0;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: 0.75rem 0 1rem;
+  background: transparent;
 }
 
 .app-header-copy {
   display: grid;
   gap: 1rem;
-}
-
-.app-header-top {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
-  align-items: start;
-  gap: 1.25rem;
 }
 
 .app-header-text {
@@ -296,7 +292,8 @@ textarea:focus {
 }
 
 .menu-shell {
-  display: grid;
+  position: relative;
+  display: inline-grid;
   gap: 0.8rem;
 }
 
@@ -304,30 +301,53 @@ textarea:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 82px;
-  min-width: 82px;
-  height: 82px;
-  padding: 0.3rem;
+  width: 56px;
+  min-width: 56px;
+  height: 56px;
+  padding: 0.5rem;
+  background: rgba(16, 20, 18, 0.5);
 }
 
-.menu-toggle-gif {
+.menu-toggle-bars {
+  display: grid;
+  gap: 5px;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 8px;
-  border: 1px solid rgba(199, 167, 91, 0.42);
-  box-shadow: 0 0 14px rgba(184, 215, 216, 0.2);
+}
+
+.menu-toggle-bars span {
+  display: block;
+  width: 100%;
+  height: 3px;
+  border-radius: 999px;
+  background: #f1e2b2;
 }
 
 .header-actions {
   display: grid;
   gap: 0.65rem;
   width: min(320px, 100%);
+  position: absolute;
+  top: calc(100% + 0.6rem);
+  left: 0;
+  padding: 0.8rem;
+  border: 1px solid rgba(199, 167, 91, 0.32);
+  border-radius: 10px;
+  background: rgba(16, 20, 18, 0.92);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.38);
 }
 
 .header-player-card {
   width: min(100%, 360px);
   margin-top: 0;
+}
+
+.top-dashboard {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 360px));
+  gap: 1rem;
+  justify-content: end;
+  align-items: start;
+  margin: 0 0 1rem;
 }
 
 .icon-button {
@@ -451,16 +471,7 @@ textarea:focus {
   overflow: hidden;
   position: relative;
   margin-top: 0.2rem;
-}
-
-.profile-card-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 0 28px rgba(199, 167, 91, 0.18);
-}
-
-.profile-card-button:active {
-  transform: translateY(1px);
-  box-shadow: 0 0 20px rgba(199, 167, 91, 0.12);
+  cursor: default;
 }
 
 .profile-card-image {
@@ -1088,6 +1099,13 @@ textarea:focus {
   margin-top: 1rem;
 }
 
+.story-memory-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(240px, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
 .story-slide-shell {
   position: relative;
   height: 420px;
@@ -1097,6 +1115,21 @@ textarea:focus {
   background:
     radial-gradient(circle at top, rgba(184, 215, 216, 0.12), transparent 30%),
     rgba(8, 10, 9, 0.62);
+}
+
+.memory-note-card {
+  display: grid;
+  align-content: start;
+  gap: 0.55rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(199, 167, 91, 0.3);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.memory-note-input {
+  min-height: 260px;
+  resize: vertical;
 }
 
 .story-slide-shell::before {
@@ -1635,10 +1668,6 @@ textarea:focus {
   color: var(--muted);
 }
 
-.journey-view {
-  margin: 1rem 0;
-}
-
 .journey-page {
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -1647,6 +1676,8 @@ textarea:focus {
     linear-gradient(135deg, rgba(255,255,255,0.04), transparent 30%),
     var(--panel);
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.36), inset 0 0 0 2px rgba(0, 0, 0, 0.45);
+  width: min(100%, 360px);
+  min-height: 100%;
 }
 
 .journey-stats {
@@ -1663,6 +1694,51 @@ textarea:focus {
 
 .journey-stats strong {
   color: #f1e2b2;
+}
+
+.skill-tree-card .journey-stage {
+  min-height: 420px;
+  padding-top: 5.3rem;
+}
+
+.skill-tree-actions {
+  margin-top: 1rem;
+}
+
+.journey-stage:not(.animated) .journey-path,
+.journey-stage:not(.animated) .journey-node.completed::after {
+  animation: none;
+  stroke-dashoffset: 0;
+  transform: scale(1);
+  opacity: 1;
+}
+
+.level-up-dance {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  gap: 1rem;
+  background: rgba(6, 8, 9, 0.58);
+  backdrop-filter: blur(5px);
+  pointer-events: none;
+  animation: level-up-dance-fade 7s ease forwards;
+}
+
+.level-up-dance img {
+  width: min(60vw, 520px);
+  max-height: 60vh;
+  object-fit: contain;
+  filter: drop-shadow(0 0 26px rgba(121, 200, 255, 0.45));
+}
+
+.level-up-dance strong {
+  color: #f7edcb;
+  font-size: clamp(2rem, 5vw, 4rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: 0 0 24px rgba(120, 200, 255, 0.8);
 }
 
 .field-label {
@@ -1973,13 +2049,16 @@ textarea:focus {
   }
 }
 
-@media (max-width: 980px) {
-  .app-header-top {
-    grid-template-columns: 1fr;
-  }
+@keyframes level-up-dance-fade {
+  0% { opacity: 0; }
+  10% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { opacity: 0; }
+}
 
+@media (max-width: 980px) {
   .header-actions {
-    width: 100%;
+    width: min(320px, calc(100vw - 2rem));
   }
   .app-header-copy,
   .booboo-layout,
@@ -1992,6 +2071,15 @@ textarea:focus {
   }
 
   .player-card {
+    width: 100%;
+  }
+
+  .top-dashboard {
+    grid-template-columns: 1fr;
+    justify-content: stretch;
+  }
+
+  .journey-page {
     width: 100%;
   }
 
@@ -2020,9 +2108,9 @@ textarea:focus {
     text-align: center;
   }
   .menu-toggle {
-    width: 66px;
-    min-width: 66px;
-    height: 66px;
+    width: 56px;
+    min-width: 56px;
+    height: 56px;
   }
   .icon-button {
     width: 100%;
@@ -2045,6 +2133,10 @@ textarea:focus {
   }
 
   .story-slider {
+    grid-template-columns: 1fr;
+  }
+
+  .story-memory-layout {
     grid-template-columns: 1fr;
   }
 

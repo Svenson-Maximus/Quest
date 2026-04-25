@@ -35,15 +35,17 @@
                 <h1 id="main-title" class="main-title">Danita's Skycraft Quests</h1>
                 <p class="intro">Te amo mi amor enjoy :) - booboo</p>
               </div>
-              <section id="player-card" class="player-card header-player-card" aria-label="Danita player card"></section>
             </div>
             <div class="menu-shell">
               <button id="menu-toggle" type="button" class="menu-toggle" aria-expanded="false" aria-controls="header-actions">
-                <img src="danitadance.gif" alt="Open menu" class="menu-toggle-gif">
+                <span class="menu-toggle-bars" aria-hidden="true">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </span>
               </button>
               <div id="header-actions" class="header-actions hidden">
                 <button id="danita-view-button" type="button" class="secondary hidden">Home View</button>
-                <button id="journey-view-button" type="button" class="secondary">Journey Tree</button>
                 <button id="booboo-view-button" type="button" class="secondary">Booboo View</button>
                 <button id="revival-button" type="button" class="secondary revival-button">Revival Rites</button>
                 <button id="wish-button" type="button">Wish Letter</button>
@@ -57,6 +59,11 @@
         </header>
 
         <section id="danita-view">
+          <section class="top-dashboard">
+            <section id="player-card" class="player-card header-player-card" aria-label="Danita player card"></section>
+            <section id="skill-tree-card" class="journey-page skill-tree-card" aria-label="Danita skill tree"></section>
+          </section>
+
           <section id="tracks" class="tracks" aria-label="Active quest tracks"></section>
 
           <section class="history-panel">
@@ -87,7 +94,6 @@
           </section>
         </section>
 
-        <section id="journey-view" class="journey-view hidden" aria-label="Danita journey tree"></section>
         <section id="booboo-view" class="booboo-view hidden" aria-label="Booboo letter approvals"></section>
       </section>
 
