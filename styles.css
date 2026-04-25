@@ -263,19 +263,26 @@ textarea:focus {
   width: min(1440px, 100%);
   margin: 0 auto;
   padding: clamp(1rem, 3vw, 2rem);
+  padding-top: clamp(7rem, 12vw, 9rem);
 }
 
 .app-header {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(1440px, calc(100% - 2rem));
   z-index: 20;
   padding: 0.75rem 0 1rem;
-  background: transparent;
+  background: linear-gradient(180deg, rgba(9, 12, 11, 0.82), rgba(9, 12, 11, 0.24), transparent);
+  backdrop-filter: blur(5px);
 }
 
 .app-header-copy {
   display: grid;
   gap: 1rem;
+  justify-items: center;
+  text-align: center;
 }
 
 .app-header-text {
@@ -295,6 +302,7 @@ textarea:focus {
   position: relative;
   display: inline-grid;
   gap: 0.8rem;
+  justify-items: center;
 }
 
 .menu-toggle {
@@ -328,7 +336,8 @@ textarea:focus {
   width: min(320px, 100%);
   position: absolute;
   top: calc(100% + 0.6rem);
-  left: 0;
+  left: 50%;
+  transform: translateX(-50%);
   padding: 0.8rem;
   border: 1px solid rgba(199, 167, 91, 0.32);
   border-radius: 10px;
@@ -345,7 +354,7 @@ textarea:focus {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 360px));
   gap: 1rem;
-  justify-content: end;
+  justify-content: center;
   align-items: start;
   margin: 0 0 1rem;
 }
@@ -2076,7 +2085,7 @@ textarea:focus {
 
   .top-dashboard {
     grid-template-columns: 1fr;
-    justify-content: stretch;
+    justify-content: center;
   }
 
   .journey-page {
