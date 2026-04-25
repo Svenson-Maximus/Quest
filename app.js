@@ -593,6 +593,17 @@ function renderBoobooReview(wish) {
         <p>${escapeHtml(wish.note || "No extra build note was written.")}</p>
       </section>
       <section class="wish-letter-section">
+        <h3>Bribe / Sweetener</h3>
+        <p>${escapeHtml(wish.bribe || "No extra bribery was offered.")}</p>
+      </section>
+      <section class="wish-letter-section">
+        <h3>Quest Booboo Receives</h3>
+        <p>${escapeHtml(wish.quest.description)}</p>
+        <ol class="wish-quest-list">
+          ${wish.quest.objectives.map((objective) => `<li>${escapeHtml(objective)}</li>`).join("")}
+        </ol>
+      </section>
+      <section class="wish-letter-section">
         <h3>Booboo Command Builder</h3>
         <p class="helper-copy">Search the local suggestion list or type any valid Java item id manually. Accepted commands appear back on Danita's board.</p>
         <div class="approval-grid">
@@ -1356,7 +1367,7 @@ boobooView.addEventListener("click", (event) => {
 
   if (action === "accept-wish" && wishId) {
     updateApprovedItemsFromBoobooForm(wishId, false);
-    acceptWish(wishId);
+    acceptWish(wishId, button);
     return;
   }
 
@@ -1568,7 +1579,7 @@ function addApprovedItem(wishId) {
   render();
 }
 
-function acceptWish(wishId) {
+function acceptWish(wishId, triggerElement) {
   const wish = save.wishes.find((entry) => entry.id === wishId);
   if (!wish) return;
 
@@ -1588,6 +1599,7 @@ function acceptWish(wishId) {
   wish.approvedItems = approvedItems;
   persist();
   render();
+  launchBoobooAcceptance(getEffectOrigin(triggerElement));
 }
 
 function denyWish(wishId) {
@@ -1659,9 +1671,9 @@ function formatItemLabel(itemId) {
 
 function buildGiveCommand(entry) {
   if (!entry?.itemId || !entry?.amount) {
-    return "/give Danita minecraft:item 64";
+    return "/give @p minecraft:item 64";
   }
-  return `/give Danita ${sanitizeItemId(entry.itemId)} ${entry.amount}`;
+  return `/give @p ${sanitizeItemId(entry.itemId)} ${entry.amount}`;
 }
 
 function formatWishStatus(status) {
@@ -2153,6 +2165,17 @@ function launchCelebration(leveledUp, effectOrigin) {
 
   document.body.appendChild(burst);
   window.setTimeout(() => burst.remove(), 1300);
+}
+
+function launchBoobooAcceptance(effectOrigin) {
+  launchCelebration(false, effectOrigin);
+
+  const banner = document.createElement("div");
+  banner.className = "booboo-accept-banner";
+  banner.setAttribute("aria-hidden", "true");
+  banner.textContent = "Letter Accepted";
+  document.body.appendChild(banner);
+  window.setTimeout(() => banner.remove(), 1500);
 }
 
 function launchDragon() {
