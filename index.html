@@ -34,6 +34,8 @@
             <p class="intro">Te amo mi amor enjoy :) - booboo</p>
           </div>
           <div class="header-actions">
+            <button id="danita-view-button" type="button" class="secondary hidden">Danita View</button>
+            <button id="booboo-view-button" type="button" class="secondary">Booboo View</button>
             <button id="revival-button" type="button" class="icon-button revival-button" aria-label="Open revival rites">
               <span aria-hidden="true">&#9760;</span>
             </button>
@@ -45,33 +47,37 @@
           </div>
         </header>
 
-        <section class="player-dashboard">
-          <section id="player-card" class="player-card" aria-label="Danita player card"></section>
-        </section>
+        <section id="danita-view">
+          <section class="player-dashboard">
+            <section id="player-card" class="player-card" aria-label="Danita player card"></section>
+          </section>
 
-        <section class="wish-board" aria-label="Booboo wish letters">
-          <div class="wish-board-head">
-            <div>
-              <p class="eyebrow">Booboo Requests</p>
-              <h2>Wish Letters</h2>
+          <section class="wish-board" aria-label="Booboo wish letters">
+            <div class="wish-board-head">
+              <div>
+                <p class="eyebrow">Booboo Requests</p>
+                <h2>Wish Letters</h2>
+              </div>
+              <button id="wish-board-button" type="button">Write New Letter</button>
             </div>
-            <button id="wish-board-button" type="button">Write New Letter</button>
-          </div>
-          <div id="wish-list" class="wish-list"></div>
+            <div id="wish-list" class="wish-list"></div>
+          </section>
+
+          <section id="tracks" class="tracks" aria-label="Active quest tracks"></section>
+
+          <section class="summary-panel" aria-label="Danita's progress summary">
+            <div><span id="total-complete">0</span><p>Quests Completed</p></div>
+            <div><span id="highest-level">1</span><p>Highest Path Level</p></div>
+            <div><span id="current-focus">The Hearth</span><p>Strongest Path</p></div>
+          </section>
+
+          <section class="history-panel">
+            <h2>Danita's Chronicle</h2>
+            <div id="history-list" class="history-list"></div>
+          </section>
         </section>
 
-        <section id="tracks" class="tracks" aria-label="Active quest tracks"></section>
-
-        <section class="summary-panel" aria-label="Danita's progress summary">
-          <div><span id="total-complete">0</span><p>Quests Completed</p></div>
-          <div><span id="highest-level">1</span><p>Highest Path Level</p></div>
-          <div><span id="current-focus">The Hearth</span><p>Strongest Path</p></div>
-        </section>
-
-        <section class="history-panel">
-          <h2>Danita's Chronicle</h2>
-          <div id="history-list" class="history-list"></div>
-        </section>
+        <section id="booboo-view" class="booboo-view hidden" aria-label="Booboo letter approvals"></section>
       </section>
 
       <div id="revival-modal" class="modal-shell hidden" aria-hidden="true">
@@ -104,6 +110,7 @@
 
     </main>
 
+    <script src="minecraft-items.js"></script>
     <script src="quests.js"></script>
     <script src="app.js"></script>
   </body>

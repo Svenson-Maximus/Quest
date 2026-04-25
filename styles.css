@@ -98,6 +98,11 @@ button.danger {
   border-color: #b36a5d;
 }
 
+button.secondary {
+  background: linear-gradient(180deg, #35454a, #171c1f);
+  border-color: #88b0b5;
+}
+
 .hidden { display: none !important; }
 
 .block-sky {
@@ -528,6 +533,35 @@ textarea:focus {
   color: #f4ead0;
 }
 
+.wish-status {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 0.4rem;
+  padding: 0.22rem 0.55rem;
+  border: 1px solid rgba(199, 167, 91, 0.48);
+  border-radius: 999px;
+  color: #f4ead0;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.wish-status.pending {
+  background: rgba(92, 96, 55, 0.3);
+  border-color: rgba(226, 214, 128, 0.52);
+}
+
+.wish-status.accepted {
+  background: rgba(58, 91, 62, 0.34);
+  border-color: rgba(149, 199, 138, 0.55);
+}
+
+.wish-status.denied {
+  background: rgba(109, 49, 45, 0.34);
+  border-color: rgba(214, 132, 120, 0.55);
+}
+
 .wish-card-head span,
 .wish-card p,
 .wish-empty {
@@ -920,6 +954,124 @@ textarea:focus {
 .wish-panel {
   width: min(820px, 100%);
   padding: 1.2rem;
+}
+
+.booboo-view {
+  margin: 1rem 0;
+}
+
+.booboo-shell {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1rem;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.055), transparent 30%),
+    var(--panel);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.36), inset 0 0 0 2px rgba(0, 0, 0, 0.45);
+}
+
+.booboo-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.booboo-head,
+.booboo-review-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: start;
+}
+
+.booboo-links {
+  display: grid;
+  gap: 0.45rem;
+  justify-items: end;
+}
+
+.booboo-links a {
+  color: #e3e1b7;
+}
+
+.booboo-layout {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.booboo-list,
+.booboo-review-card {
+  border: 1px solid rgba(199, 167, 91, 0.34);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.booboo-list {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.75rem;
+  align-content: start;
+}
+
+.booboo-list-item {
+  text-align: left;
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.8rem;
+}
+
+.booboo-list-item.active {
+  border-color: #f0d889;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 7px 0 #0a0b0a, 0 0 24px rgba(199, 167, 91, 0.16);
+}
+
+.booboo-list-item strong,
+.booboo-list-item span {
+  display: block;
+}
+
+.booboo-list-item span:last-child {
+  color: var(--muted);
+}
+
+.booboo-review-card {
+  padding: 1rem;
+}
+
+.booboo-password-form {
+  max-width: 520px;
+}
+
+.approval-grid {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.approval-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) 140px;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid rgba(199, 167, 91, 0.28);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.approval-row-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.approval-row-actions code {
+  white-space: pre-wrap;
+  color: #f6ebca;
+}
+
+.approval-actions {
+  margin-top: 1.1rem;
 }
 
 .image-modal-copy {
@@ -1368,15 +1520,21 @@ textarea:focus {
   }
   .player-dashboard,
   .summary-panel,
+  .booboo-layout,
   .tracks,
   .player-card-stats,
   .path-levels { grid-template-columns: 1fr; }
+
+  .booboo-links {
+    justify-items: start;
+  }
 }
 
 @media (max-width: 560px) {
   .password-row, .quest-actions { grid-template-columns: 1fr; }
   .level-reward-row { grid-template-columns: 1fr; }
   .wish-row { grid-template-columns: 1fr; }
+  .approval-row { grid-template-columns: 1fr; }
   .track-image {
     width: 66px;
     height: 66px;
@@ -1400,7 +1558,10 @@ textarea:focus {
   .player-card-head,
   .wish-board-head,
   .wish-card-head,
+  .booboo-head,
+  .booboo-review-head,
   .cosmetic-item,
+  .approval-row-actions,
   .wish-actions,
   .wish-materials-head,
   .cosmetic-track-head {

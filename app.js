@@ -1,6 +1,8 @@
 const PASSWORD = "Danitas-Quest";
 const SAVE_KEY = "danitas-quest-save-v1";
 const UNLOCK_KEY = "danitas-quest-unlocked";
+const BOOBOO_PASSWORD = "teamo";
+const BOOBOO_UNLOCK_KEY = "danitas-quest-booboo-unlocked";
 const TRACKS = ["building", "gathering", "pathfinder"];
 const XP_PER_QUEST = 100;
 const XP_BOTTLE_AVERAGE = 7;
@@ -16,7 +18,6 @@ const QUEST_COMPLETE_SOUND_START = 4.3;
 const QUEST_COMPLETE_SOUND_END = 4.9;
 const PAGE_ENTRY_SOUND = "skairin.mp3";
 const LEVEL_UP_SOUND = "42dfb7_skyrim_level_up_sound_effect.mp3";
-const WISH_LETTER_EMAIL = "sv3nleutenegger@gmail.com";
 const SKY_PARTICLE_COUNT = 200;
 const PLAYER_TITLES = [
   { level: 1, title: "Hearthbound Wanderer", flavor: "The road has only just begun." },
@@ -43,6 +44,10 @@ const exportButton = document.querySelector("#export-save");
 const importInput = document.querySelector("#import-save");
 const resetButton = document.querySelector("#reset-save");
 const mainTitle = document.querySelector("#main-title");
+const danitaView = document.querySelector("#danita-view");
+const boobooView = document.querySelector("#booboo-view");
+const boobooViewButton = document.querySelector("#booboo-view-button");
+const danitaViewButton = document.querySelector("#danita-view-button");
 const revivalButton = document.querySelector("#revival-button");
 const wishButton = document.querySelector("#wish-button");
 const revivalModal = document.querySelector("#revival-modal");
@@ -139,6 +144,8 @@ let levelUpAudio;
 let wishDraft = createWishDraft();
 let openWishId = null;
 let wishModalMode = "compose";
+let currentView = "danita";
+let selectedBoobooWishId = null;
 
 populateBlockSky();
 
@@ -271,6 +278,11 @@ function normalizeWish(candidate) {
     note: candidate.note || "",
     bribe: candidate.bribe || "",
     materials,
+    status: normalizeWishStatus(candidate.status),
+    reviewedAt: candidate.reviewedAt || "",
+    reviewedBy: candidate.reviewedBy || "",
+    denialReason: candidate.denialReason || "",
+    approvedItems: normalizeApprovedItems(candidate.approvedItems, materials),
     quest: candidate.quest && typeof candidate.quest === "object" ? {
       title: candidate.quest.title || "Booboo's Supply Run",
       description: candidate.quest.description || "",
@@ -281,6 +293,48 @@ function normalizeWish(candidate) {
       bribe: candidate.bribe || "",
       materials
     })
+  };
+}
+
+function normalizeWishStatus(status) {
+  return ["pending", "accepted", "denied"].includes(status) ? status : "pending";
+}
+
+function normalizeApprovedItems(candidate, fallbackMaterials = []) {
+  const base = Array.isArray(candidate) ? candidate : [];
+  const normalized = base
+    .map((entry) => normalizeApprovedItem(entry))
+    .filter(Boolean);
+
+  if (normalized.length) {
+    return normalized;
+  }
+
+  return fallbackMaterials.map((entry) => ({
+    itemId: suggestItemId(entry.name),
+    amount: entry.quantity
+  }));
+}
+
+function normalizeApprovedItem(candidate) {
+  if (!candidate || typeof candidate !== "object") {
+    return null;
+  }
+
+  const itemId = typeof candidate.itemId === "string"
+    ? sanitizeItemId(candidate.itemId)
+    : "";
+  const amount = typeof candidate.amount === "string" || Number.isFinite(candidate.amount)
+    ? String(candidate.amount).trim()
+    : "";
+
+  if (!itemId && !amount) {
+    return null;
+  }
+
+  return {
+    itemId,
+    amount
   };
 }
 
@@ -430,10 +484,187 @@ function render() {
   tracksEl.innerHTML = TRACKS.map(renderTrack).join("");
   renderPlayerCard();
   renderWishBoard();
+  renderBoobooView();
   renderSummary();
   renderHistory();
   renderRevivalModal();
   renderWishModal();
+  syncViewState();
+}
+
+function renderBoobooView() {
+  const pendingCount = save.wishes.filter((wish) => wish.status === "pending").length;
+  const selectedWish = save.wishes.find((wish) => wish.id === selectedBoobooWishId) || null;
+  const reviewWish = selectedWish || save.wishes.find((wish) => wish.status === "pending") || save.wishes[0] || null;
+
+  if (reviewWish) {
+    selectedBoobooWishId = reviewWish.id;
+  }
+
+  if (!isBoobooUnlocked()) {
+    boobooView.innerHTML = `
+      <section class="booboo-shell">
+        <article class="booboo-panel">
+          <p class="eyebrow">Booboo Access</p>
+          <h2>Enter The Booboo Page</h2>
+          <p class="helper-copy">Pending letters wait here for approval. Use the password to open the review table.</p>
+          <form id="booboo-password-form" class="booboo-password-form">
+            <label class="field-label" for="booboo-password">Password</label>
+            <div class="password-row">
+              <input id="booboo-password" type="password" autocomplete="current-password" placeholder="Enter Booboo password">
+              <button type="submit">Unlock</button>
+            </div>
+            <p id="booboo-password-message" class="form-message" role="status"></p>
+          </form>
+        </article>
+      </section>
+    `;
+    return;
+  }
+
+  boobooView.innerHTML = `
+    <section class="booboo-shell">
+      <article class="booboo-panel">
+        <div class="booboo-head">
+          <div>
+            <p class="eyebrow">Booboo Command Board</p>
+            <h2>Letter Review</h2>
+            <p class="helper-copy">${pendingCount} pending ${pendingCount === 1 ? "letter" : "letters"} waiting for approval.</p>
+          </div>
+          <div class="booboo-links">
+            <a href="https://minecraft.wiki/w/Java_Edition_data_values/Items" target="_blank" rel="noreferrer">Minecraft Wiki Item IDs</a>
+            <a href="https://mcutils.com/item-ids" target="_blank" rel="noreferrer">MC Utils Item Search</a>
+          </div>
+        </div>
+        <div class="booboo-layout">
+          <section class="booboo-list">
+            ${renderBoobooWishList()}
+          </section>
+          <section class="booboo-review">
+            ${reviewWish ? renderBoobooReview(reviewWish) : "<p class=\"wish-empty\">No letters exist yet.</p>"}
+          </section>
+        </div>
+      </article>
+    </section>
+  `;
+}
+
+function renderBoobooWishList() {
+  if (!save.wishes.length) {
+    return "<p class=\"wish-empty\">No letters to review yet.</p>";
+  }
+
+  return save.wishes
+    .slice()
+    .reverse()
+    .map((wish) => `
+      <button
+        type="button"
+        class="booboo-list-item ${wish.id === selectedBoobooWishId ? "active" : ""}"
+        data-action="select-booboo-wish"
+        data-wish-id="${escapeHtml(wish.id)}"
+      >
+        <span class="wish-status ${escapeHtml(wish.status)}">${escapeHtml(formatWishStatus(wish.status))}</span>
+        <strong>${escapeHtml(wish.project)}</strong>
+        <span>${new Date(wish.createdAt).toLocaleString()}</span>
+      </button>
+    `)
+    .join("");
+}
+
+function renderBoobooReview(wish) {
+  return `
+    <article class="booboo-review-card">
+      <div class="booboo-review-head">
+        <div>
+          <span class="wish-status ${escapeHtml(wish.status)}">${escapeHtml(formatWishStatus(wish.status))}</span>
+          <h3>${escapeHtml(wish.project)}</h3>
+          <p class="helper-copy">Sent ${new Date(wish.createdAt).toLocaleString()}</p>
+        </div>
+      </div>
+      <section class="wish-letter-section">
+        <h3>Requested Materials</h3>
+        <ul class="wish-material-list">
+          ${wish.materials.map((entry) => `<li><strong>${escapeHtml(entry.quantity)}x</strong> ${escapeHtml(entry.name)}</li>`).join("")}
+        </ul>
+      </section>
+      <section class="wish-letter-section">
+        <h3>Danita's Note</h3>
+        <p>${escapeHtml(wish.note || "No extra build note was written.")}</p>
+      </section>
+      <section class="wish-letter-section">
+        <h3>Booboo Command Builder</h3>
+        <p class="helper-copy">Search the local suggestion list or type any valid Java item id manually. Accepted commands appear back on Danita's board.</p>
+        <div class="approval-grid">
+          ${wish.approvedItems.map((entry, index) => renderApprovedItemRow(entry, index)).join("")}
+        </div>
+        <div class="wish-actions">
+          <button type="button" data-action="add-approved-item" data-wish-id="${escapeHtml(wish.id)}">Add Item</button>
+        </div>
+      </section>
+      ${wish.status === "denied" ? `
+        <section class="wish-letter-section">
+          <h3>Denial Reason</h3>
+          <p>${escapeHtml(wish.denialReason || "No reason saved.")}</p>
+        </section>
+      ` : ""}
+      <div class="wish-actions approval-actions">
+        <button type="button" data-action="accept-wish" data-wish-id="${escapeHtml(wish.id)}">Accept Letter</button>
+        <button type="button" data-action="deny-wish" data-wish-id="${escapeHtml(wish.id)}" class="danger">Deny Letter</button>
+      </div>
+    </article>
+  `;
+}
+
+function renderApprovedItemRow(entry, index) {
+  const datalistId = `minecraft-item-options-${index}`;
+  const suggestions = getMinecraftItemSuggestions(entry.itemId || "");
+
+  return `
+    <div class="approval-row">
+      <div>
+        <label class="field-label" for="approved-item-${index}">Minecraft Item</label>
+        <input
+          id="approved-item-${index}"
+          type="text"
+          class="approved-item-input"
+          list="${datalistId}"
+          data-action="approved-item-id"
+          data-index="${index}"
+          value="${escapeHtml(entry.itemId)}"
+          placeholder="minecraft:oak_log or oak_log"
+        >
+        <datalist id="${datalistId}">
+          ${suggestions.map((itemId) => `<option value="${escapeHtml(itemId)}">${escapeHtml(formatItemLabel(itemId))}</option>`).join("")}
+        </datalist>
+      </div>
+      <div>
+        <label class="field-label" for="approved-amount-${index}">Amount</label>
+        <input
+          id="approved-amount-${index}"
+          type="number"
+          min="1"
+          step="1"
+          data-action="approved-item-amount"
+          data-index="${index}"
+          value="${escapeHtml(entry.amount || "")}"
+          placeholder="64"
+        >
+      </div>
+      <div class="approval-row-actions">
+        <code>${escapeHtml(buildGiveCommand(entry))}</code>
+        <button type="button" data-action="remove-approved-item" data-index="${index}" class="secondary">Remove</button>
+      </div>
+    </div>
+  `;
+}
+
+function syncViewState() {
+  const showBooboo = currentView === "booboo";
+  danitaView.classList.toggle("hidden", showBooboo);
+  boobooView.classList.toggle("hidden", !showBooboo);
+  boobooViewButton.classList.toggle("hidden", showBooboo);
+  danitaViewButton.classList.toggle("hidden", !showBooboo);
 }
 
 function renderTrack(trackName) {
@@ -606,6 +837,7 @@ function renderWishBoard() {
       <article class="wish-card">
         <div class="wish-card-head">
           <div>
+            <span class="wish-status ${escapeHtml(wish.status)}">${escapeHtml(formatWishStatus(wish.status))}</span>
             <strong>${escapeHtml(wish.project)}</strong>
             <span>${new Date(wish.createdAt).toLocaleString()}</span>
           </div>
@@ -637,6 +869,7 @@ function renderWishModal() {
         <p class="wish-seal">Booboo Supply Petition</p>
         <h2 id="wish-modal-title">${escapeHtml(wish.project)}</h2>
         <p class="wish-meta">Sent ${new Date(wish.createdAt).toLocaleString()}</p>
+        <p class="wish-meta"><strong>Status:</strong> ${escapeHtml(formatWishStatus(wish.status))}</p>
         <section class="wish-letter-section">
           <h3>Requested Materials</h3>
           <ul class="wish-material-list">
@@ -658,9 +891,28 @@ function renderWishModal() {
             ${wish.quest.objectives.map((objective) => `<li>${escapeHtml(objective)}</li>`).join("")}
           </ol>
         </section>
+        ${wish.status === "accepted" ? `
+          <section class="wish-letter-section">
+            <h3>Approved Copy Commands</h3>
+            <div class="command-list">
+              ${wish.approvedItems
+                .filter((entry) => entry.itemId && entry.amount)
+                .map((entry) => `
+                  <div class="command-row">
+                    <code>${escapeHtml(buildGiveCommand(entry))}</code>
+                    <button type="button" data-action="copy-command" data-command="${escapeHtml(buildGiveCommand(entry))}">Copy</button>
+                  </div>
+                `).join("") || "<p>No approved copy commands saved yet.</p>"}
+            </div>
+          </section>
+        ` : ""}
+        ${wish.status === "denied" ? `
+          <section class="wish-letter-section">
+            <h3>Denied By Booboo</h3>
+            <p>${escapeHtml(wish.denialReason || "No reason was written.")}</p>
+          </section>
+        ` : ""}
         <div class="wish-actions">
-          <button type="button" data-action="email-wish" data-wish-id="${escapeHtml(wish.id)}">Open Email Draft</button>
-          <button type="button" data-action="copy-wish-email" data-wish-id="${escapeHtml(wish.id)}">Copy Email Text</button>
           <button type="button" data-action="delete-wish" data-wish-id="${escapeHtml(wish.id)}" class="danger">Delete Letter</button>
         </div>
       </article>
@@ -962,6 +1214,16 @@ revivalButton.addEventListener("click", () => {
   openRevivalModal();
 });
 
+boobooViewButton.addEventListener("click", () => {
+  currentView = "booboo";
+  render();
+});
+
+danitaViewButton.addEventListener("click", () => {
+  currentView = "danita";
+  render();
+});
+
 wishButton.addEventListener("click", () => {
   openWishComposeModal();
 });
@@ -1045,6 +1307,81 @@ imageModal.addEventListener("click", (event) => {
   closeImageModal();
 });
 
+boobooView.addEventListener("submit", (event) => {
+  if (!(event.target instanceof HTMLFormElement) || event.target.id !== "booboo-password-form") return;
+  event.preventDefault();
+  const input = boobooView.querySelector("#booboo-password");
+  const message = boobooView.querySelector("#booboo-password-message");
+  if (!(input instanceof HTMLInputElement) || !message) return;
+
+  if (input.value.trim() === BOOBOO_PASSWORD) {
+    unlockBoobooView();
+    render();
+    return;
+  }
+
+  message.textContent = "That is not the Booboo password.";
+  input.select();
+});
+
+boobooView.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-action]");
+  if (!button) return;
+
+  const wishId = button.dataset.wishId;
+  const action = button.dataset.action;
+
+  if (action === "select-booboo-wish" && wishId) {
+    selectedBoobooWishId = wishId;
+    renderBoobooView();
+    return;
+  }
+
+  if (action === "add-approved-item" && wishId) {
+    updateApprovedItemsFromBoobooForm(wishId, false);
+    addApprovedItem(wishId);
+    return;
+  }
+
+  if (action === "remove-approved-item") {
+    const activeWish = getSelectedBoobooWish();
+    const index = Number.parseInt(button.dataset.index || "", 10);
+    if (!activeWish || !Number.isFinite(index)) return;
+    updateApprovedItemsFromBoobooForm(activeWish.id, false);
+    activeWish.approvedItems.splice(index, 1);
+    persist();
+    render();
+    return;
+  }
+
+  if (action === "accept-wish" && wishId) {
+    updateApprovedItemsFromBoobooForm(wishId, false);
+    acceptWish(wishId);
+    return;
+  }
+
+  if (action === "deny-wish" && wishId) {
+    denyWish(wishId);
+  }
+});
+
+boobooView.addEventListener("input", (event) => {
+  const input = event.target.closest("input[data-action]");
+  if (!input) return;
+  const activeWish = getSelectedBoobooWish();
+  if (!activeWish) return;
+  updateApprovedItemsFromBoobooForm(activeWish.id, false);
+
+  const row = input.closest(".approval-row");
+  const commandPreview = row?.querySelector("code");
+  if (row && commandPreview) {
+    commandPreview.textContent = buildGiveCommand({
+      itemId: row.querySelector("[data-action='approved-item-id']")?.value || "",
+      amount: row.querySelector("[data-action='approved-item-amount']")?.value || ""
+    });
+  }
+});
+
 wishModal.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-action], .modal-backdrop[data-action]");
   if (!button) return;
@@ -1068,20 +1405,13 @@ wishModal.addEventListener("click", (event) => {
     return;
   }
 
-  if (action === "email-wish") {
-    const wish = save.wishes.find((entry) => entry.id === button.dataset.wishId);
-    if (wish) sendWishByEmail(wish);
-    return;
-  }
-
-  if (action === "copy-wish-email") {
-    const wish = save.wishes.find((entry) => entry.id === button.dataset.wishId);
-    if (wish) copyWishEmailText(wish);
-    return;
-  }
-
   if (action === "delete-wish") {
     deleteWish(button.dataset.wishId);
+    return;
+  }
+
+  if (action === "copy-command") {
+    copySingleCommand(button);
   }
 });
 
@@ -1196,6 +1526,150 @@ function syncWishDraftFromForm() {
   }));
 }
 
+function isBoobooUnlocked() {
+  return localStorage.getItem(BOOBOO_UNLOCK_KEY) === "true";
+}
+
+function unlockBoobooView() {
+  localStorage.setItem(BOOBOO_UNLOCK_KEY, "true");
+}
+
+function getSelectedBoobooWish() {
+  return save.wishes.find((wish) => wish.id === selectedBoobooWishId) || null;
+}
+
+function updateApprovedItemsFromBoobooForm(wishId, saveChanges = true) {
+  const wish = save.wishes.find((entry) => entry.id === wishId);
+  if (!wish) return;
+
+  const rows = Array.from(boobooView.querySelectorAll(".approval-row"));
+  wish.approvedItems = rows
+    .map((row) => ({
+      itemId: sanitizeItemId(row.querySelector("[data-action='approved-item-id']")?.value || ""),
+      amount: String(row.querySelector("[data-action='approved-item-amount']")?.value || "").trim()
+    }))
+    .filter((entry) => entry.itemId || entry.amount);
+
+  if (!wish.approvedItems.length) {
+    wish.approvedItems = [{ itemId: "", amount: "" }];
+  }
+
+  if (saveChanges) {
+    persist();
+    render();
+  }
+}
+
+function addApprovedItem(wishId) {
+  const wish = save.wishes.find((entry) => entry.id === wishId);
+  if (!wish) return;
+  wish.approvedItems.push({ itemId: "", amount: "" });
+  persist();
+  render();
+}
+
+function acceptWish(wishId) {
+  const wish = save.wishes.find((entry) => entry.id === wishId);
+  if (!wish) return;
+
+  const approvedItems = wish.approvedItems
+    .map((entry) => normalizeApprovedItem(entry))
+    .filter((entry) => entry?.itemId && entry?.amount);
+
+  if (!approvedItems.length) {
+    window.alert("Add at least one valid Minecraft item and amount before accepting the letter.");
+    return;
+  }
+
+  wish.status = "accepted";
+  wish.reviewedAt = new Date().toISOString();
+  wish.reviewedBy = "Booboo";
+  wish.denialReason = "";
+  wish.approvedItems = approvedItems;
+  persist();
+  render();
+}
+
+function denyWish(wishId) {
+  const wish = save.wishes.find((entry) => entry.id === wishId);
+  if (!wish) return;
+
+  const denialReason = window.prompt("Why is this letter denied?", wish.denialReason || "");
+  if (denialReason === null) return;
+
+  wish.status = "denied";
+  wish.reviewedAt = new Date().toISOString();
+  wish.reviewedBy = "Booboo";
+  wish.denialReason = denialReason.trim();
+  persist();
+  render();
+}
+
+function sanitizeItemId(value) {
+  const trimmed = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+  if (!trimmed) return "";
+  return trimmed.startsWith("minecraft:") ? trimmed : `minecraft:${trimmed}`;
+}
+
+function suggestItemId(name) {
+  const normalizedName = String(name || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  if (!normalizedName) {
+    return "";
+  }
+
+  const exactMatch = MINECRAFT_ITEM_LIBRARY.find((entry) => entry === normalizedName);
+  if (exactMatch) {
+    return `minecraft:${exactMatch}`;
+  }
+
+  const partialMatch = MINECRAFT_ITEM_LIBRARY.find((entry) => entry.includes(normalizedName) || normalizedName.includes(entry));
+  return partialMatch ? `minecraft:${partialMatch}` : `minecraft:${normalizedName}`;
+}
+
+function getMinecraftItemSuggestions(query) {
+  const normalizedQuery = String(query || "")
+    .trim()
+    .toLowerCase()
+    .replace(/^minecraft:/, "")
+    .replace(/\s+/g, "_");
+
+  const customMaterialIds = save.wishes
+    .flatMap((wish) => wish.materials)
+    .map((entry) => suggestItemId(entry.name).replace(/^minecraft:/, ""))
+    .filter(Boolean);
+
+  const suggestionPool = Array.from(new Set([...customMaterialIds, ...MINECRAFT_ITEM_LIBRARY]));
+  const filtered = normalizedQuery
+    ? suggestionPool.filter((entry) => entry.includes(normalizedQuery))
+    : suggestionPool;
+
+  return filtered.slice(0, 60).map((entry) => `minecraft:${entry}`);
+}
+
+function formatItemLabel(itemId) {
+  return itemId
+    .replace(/^minecraft:/, "")
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function buildGiveCommand(entry) {
+  if (!entry?.itemId || !entry?.amount) {
+    return "/give Danita minecraft:item 64";
+  }
+  return `/give Danita ${sanitizeItemId(entry.itemId)} ${entry.amount}`;
+}
+
+function formatWishStatus(status) {
+  if (status === "accepted") return "Accepted";
+  if (status === "denied") return "Denied";
+  return "Pending";
+}
+
 function submitWishDraft() {
   syncWishDraftFromForm();
 
@@ -1221,10 +1695,10 @@ function submitWishDraft() {
   if (save.wishes.length > 16) {
     save.wishes = save.wishes.slice(-16);
   }
+  selectedBoobooWishId = wish.id;
   persist();
   render();
   openWishReadModal(wish.id);
-  sendWishByEmail(wish);
 }
 
 function generateWishQuest(wish) {
@@ -1244,74 +1718,15 @@ function generateWishQuest(wish) {
   };
 }
 
-function sendWishByEmail(wish) {
-  const payload = buildWishEmailPayload(wish);
-  copyTextToClipboard(payload.body);
-
-  const link = document.createElement("a");
-  link.href = payload.mailtoUrl;
-  link.style.display = "none";
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-}
-
-function buildWishEmailPayload(wish) {
-  const subject = `Wish Letter: ${wish.project}`;
-  const body = [
-    `To: ${WISH_LETTER_EMAIL}`,
-    "",
-    "Booboo Supply Petition",
-    "",
-    `Project: ${wish.project}`,
-    "",
-    "Requested Materials:",
-    ...wish.materials.map((entry) => `- ${entry.quantity}x ${entry.name}`),
-    "",
-    "Why Danita Wants It:",
-    wish.note || "No extra note was written.",
-    "",
-    "Bribe / Sweetener:",
-    wish.bribe || "No extra bribery was offered.",
-    "",
-    "Quest Generated:",
-    wish.quest.title,
-    wish.quest.description,
-    "",
-    "Objectives:",
-    ...wish.quest.objectives.map((objective) => `- ${objective}`)
-  ].join("\n");
-
-  return {
-    subject,
-    body,
-    mailtoUrl: `mailto:${encodeURIComponent(WISH_LETTER_EMAIL)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-  };
-}
-
-function copyWishEmailText(wish) {
-  const payload = buildWishEmailPayload(wish);
-  copyTextToClipboard(payload.body, "Letter text copied.");
-}
-
-function copyTextToClipboard(text, successMessage = "Email text copied in case mail did not open.") {
-  if (!navigator.clipboard?.writeText) {
-    return;
-  }
-
-  navigator.clipboard.writeText(text)
-    .then(() => {
-      window.alert(successMessage);
-    })
-    .catch(() => {});
-}
-
 function deleteWish(wishId) {
   const wish = save.wishes.find((entry) => entry.id === wishId);
   if (!wish) return;
   if (!window.confirm(`Delete the letter for "${wish.project}"?`)) return;
 
   save.wishes = save.wishes.filter((entry) => entry.id !== wishId);
+  if (selectedBoobooWishId === wishId) {
+    selectedBoobooWishId = save.wishes[0]?.id || null;
+  }
   persist();
   render();
   closeWishModal();
