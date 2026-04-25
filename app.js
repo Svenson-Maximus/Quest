@@ -1086,6 +1086,14 @@ function renderSkillTreeCard() {
           ></div>
         `).join("")}
     </div>
+    <div class="skill-tree-crests">
+      ${TRACKS.map((track) => `
+        <div class="skill-tree-crest">
+          <img class="track-image" src="${TRACK_IMAGES[track]}" alt="${escapeHtml(QUESTS[track].title)} crest">
+          <span>${escapeHtml(QUESTS[track].title)}</span>
+        </div>
+      `).join("")}
+    </div>
     <div class="skill-tree-actions">
       <button type="button" data-action="play-skill-tree" ${journey.completedCount ? "" : "disabled"}>Play Progress Animation</button>
     </div>
