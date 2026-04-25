@@ -2,13 +2,17 @@ const PASSWORD = "Danitas-Quest";
 const SAVE_KEY = "danitas-quest-save-v1";
 const UNLOCK_KEY = "danitas-quest-unlocked";
 const BOOBOO_PASSWORD = "teamo";
-const TRACKS = ["building", "gathering", "pathfinder"];
+const TRACKS = ["building", "gathering", "pathfinder", "redstone"];
 const XP_PER_QUEST = 100;
 const XP_BOTTLE_AVERAGE = 7;
 const TRACK_IMAGES = {
   building: "buildernew.png",
   gathering: "gatherernew.png",
-  pathfinder: "pathfindernew.png"
+  pathfinder: "pathfindernew.png",
+  redstone: "danitatechnician.png"
+};
+const TRACK_UNLOCK_LEVELS = {
+  redstone: 13
 };
 const PROFILE_CARD_IMAGE = "profilecard.png";
 const MEMORY_NOTE_KEY = "danitas-memory-notes-v1";
@@ -713,6 +717,33 @@ function syncViewState() {
 function renderTrack(trackName) {
   const trackData = QUESTS[trackName];
   const state = save.tracks[trackName];
+  const profile = getPlayerProfile();
+  const unlockLevel = getTrackUnlockLevel(trackName);
+  const trackUnlocked = isTrackUnlocked(trackName, profile.playerLevel);
+  if (!trackUnlocked) {
+    return `
+      <article class="quest-card ${trackName} locked-track-card">
+        <div class="track-head">
+          ${renderTrackHeader(trackName, trackData, state, state.completed.length, trackData.quests.length)}
+        </div>
+        <div class="quest-body">
+          <p class="quest-number">Locked Path</p>
+          <h3 class="quest-title">${escapeHtml(trackData.title)} unlocks later</h3>
+          <div class="quest-status locked">Reach overall level ${unlockLevel} to unlock this path. Danita is currently level ${profile.playerLevel}.</div>
+          <p class="description">${escapeHtml(trackData.subtitle)}</p>
+          <details class="hint">
+            <summary>What Waits Here</summary>
+            <p>This path focuses on practical redstone: secret doors, room lighting, safe workshops, useful farms, storage handling, and one large technician build at the end.</p>
+          </details>
+          <div class="reward"><strong>Unlock Reward:</strong> Advanced machines, diamonds, and technician-grade tools.</div>
+          <div class="quest-actions">
+            <button type="button" disabled>Unlocks At Level ${unlockLevel}</button>
+          </div>
+        </div>
+      </article>
+    `;
+  }
+
   const quest = trackData.quests[state.questIndex];
   const completedCount = state.completed.length;
   const totalCount = trackData.quests.length;
@@ -1137,15 +1168,16 @@ function getPlayerProfile() {
 }
 
 function getJourneyMapData() {
-  const startX = 18;
-  const spacingX = 32;
+  const minX = 14;
+  const maxX = 86;
+  const spacingX = TRACKS.length > 1 ? (maxX - minX) / (TRACKS.length - 1) : 0;
   const topY = 28;
   const stepY = 14;
   const columns = TRACKS.map((track, index) => {
     const completed = save.tracks[track].completed.length;
     return {
       track,
-      x: startX + (index * spacingX),
+      x: minX + (index * spacingX),
       title: QUESTS[track].title,
       progress: `${completed} done`
     };
@@ -2328,6 +2360,7 @@ function getTotalExperienceForLevel(level) {
 
 function activateQuest(trackName) {
   if (save.activeQuest) return;
+  if (!isTrackUnlocked(trackName)) return;
 
   const state = save.tracks[trackName];
   const quest = QUESTS[trackName].quests[state.questIndex];
@@ -2434,6 +2467,7 @@ function playLevelUpAudio() {
 }
 
 function completeQuest(trackName, triggerElement) {
+  if (!isTrackUnlocked(trackName)) return;
   const state = save.tracks[trackName];
   const trackData = QUESTS[trackName];
   const quest = trackData.quests[state.questIndex];
@@ -2655,6 +2689,14 @@ function getEffectOrigin(element) {
 function isCurrentQuestActive(trackName) {
   if (!save.activeQuest) return false;
   return save.activeQuest.track === trackName && save.activeQuest.questIndex === save.tracks[trackName].questIndex;
+}
+
+function getTrackUnlockLevel(trackName) {
+  return TRACK_UNLOCK_LEVELS[trackName] || 1;
+}
+
+function isTrackUnlocked(trackName, playerLevel = getPlayerProfile().playerLevel) {
+  return playerLevel >= getTrackUnlockLevel(trackName);
 }
 
 function getActiveQuestDetails() {

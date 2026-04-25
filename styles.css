@@ -760,7 +760,7 @@ textarea:focus {
 
 .tracks {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 1rem;
   align-items: start;
 }
@@ -789,6 +789,7 @@ textarea:focus {
 .building .track-head { background: linear-gradient(135deg, #31483a, #181d1a); }
 .gathering .track-head { background: linear-gradient(135deg, #6a562d, #1d1c17); }
 .pathfinder .track-head { background: linear-gradient(135deg, #47545b, #17191a); }
+.redstone .track-head { background: linear-gradient(135deg, #4a3824, #181311); }
 
 .track-head h2 {
   margin: 0;
@@ -902,6 +903,10 @@ textarea:focus {
 .quest-status.ready {
   background: rgba(69, 84, 91, 0.36);
   color: #d8e7e8;
+}
+
+.locked-track-card {
+  opacity: 0.98;
 }
 
 .description { line-height: 1.5; color: var(--muted); }
@@ -1756,7 +1761,7 @@ textarea:focus {
 
 .skill-tree-crests {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
   gap: 0.75rem;
   margin-top: 1rem;
 }
