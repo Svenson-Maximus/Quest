@@ -10,6 +10,13 @@ const TRACK_IMAGES = {
   gathering: "gatherernew.png",
   pathfinder: "pathfindernew.png"
 };
+const PROFILE_CARD_IMAGE = "profilecard.png";
+const STORY_IMAGES = [
+  {
+    src: "storyimages/image.png",
+    title: "Skycraft Memory I"
+  }
+];
 const QUEST_ACTIVATION_SOUND = "minecraft-sound-effects-chest-sound-effect.mp3";
 const QUEST_ACTIVATION_SOUND_START = 2.5;
 const QUEST_ACTIVATION_SOUND_END = 3.5;
@@ -36,6 +43,8 @@ const passwordInput = document.querySelector("#password");
 const passwordMessage = document.querySelector("#password-message");
 const tracksEl = document.querySelector("#tracks");
 const historyList = document.querySelector("#history-list");
+const storySlider = document.querySelector("#story-slider");
+const storyCounter = document.querySelector("#story-counter");
 const totalCompleteEl = document.querySelector("#total-complete");
 const highestLevelEl = document.querySelector("#highest-level");
 const currentFocusEl = document.querySelector("#current-focus");
@@ -59,6 +68,8 @@ const wishBoardButton = document.querySelector("#wish-board-button");
 const wishListEl = document.querySelector("#wish-list");
 const wishModal = document.querySelector("#wish-modal");
 const wishModalContent = document.querySelector("#wish-modal-content");
+const journeyModal = document.querySelector("#journey-modal");
+const journeyModalContent = document.querySelector("#journey-modal-content");
 
 const REVIVAL_LEVEL_RITUALS = [
   {
@@ -146,6 +157,7 @@ let wishModalMode = "compose";
 let currentView = "danita";
 let selectedBoobooWishId = null;
 let boobooUnlocked = false;
+let currentStoryIndex = 0;
 
 populateBlockSky();
 
@@ -487,8 +499,10 @@ function render() {
   renderBoobooView();
   renderSummary();
   renderHistory();
+  renderStorySlider();
   renderRevivalModal();
   renderWishModal();
+  renderJourneyModal();
   syncViewState();
 }
 
@@ -791,7 +805,6 @@ function renderSummary() {
 
 function renderPlayerCard() {
   const profile = getPlayerProfile();
-  const nextTitle = PLAYER_TITLES.find((entry) => entry.level > profile.playerLevel);
 
   playerCardEl.innerHTML = `
     <div class="player-card-head">
@@ -799,39 +812,21 @@ function renderPlayerCard() {
         <p class="eyebrow">Player Card</p>
         <h2>${escapeHtml(save.player)}</h2>
       </div>
-      <div class="player-level-medallion">Lv ${profile.playerLevel}</div>
     </div>
-    <div class="player-title-banner">
+    <button type="button" class="profile-card-button" data-action="open-journey-map" aria-label="Open Danita's journey map">
+      <img class="profile-card-image" src="${PROFILE_CARD_IMAGE}" alt="${escapeHtml(save.player)} profile card">
+      <div class="player-level-medallion compact">Lv ${profile.playerLevel}</div>
+      <div class="profile-card-overlay">
+        <strong>${escapeHtml(save.player)}</strong>
+        <span>Open Journey Map</span>
+      </div>
+    </button>
+    <div class="player-card-caption">
+      <p class="eyebrow">Current Cosmetic Title</p>
       <strong>${escapeHtml(profile.currentTitle.title)}</strong>
       <span>${escapeHtml(profile.currentTitle.flavor)}</span>
     </div>
-    <div class="player-card-stats">
-      <div><strong>Total XP</strong><span>${profile.totalXp}</span></div>
-      <div><strong>Quests Done</strong><span>${profile.totalComplete}</span></div>
-      <div><strong>Best Path</strong><span>${escapeHtml(profile.strongestPath)}</span></div>
-    </div>
-    <div class="path-levels">
-      ${TRACKS.map((track) => `
-        <div class="path-level-chip ${escapeHtml(track)}">
-          <strong>${escapeHtml(QUESTS[track].title)}</strong>
-          <span>Lv ${save.tracks[track].level}</span>
-        </div>
-      `).join("")}
-    </div>
-    <div class="cosmetic-track">
-      <div class="cosmetic-track-head">
-        <strong>Cosmetic Titles</strong>
-        <span>${nextTitle ? `Next at Lv ${nextTitle.level}: ${escapeHtml(nextTitle.title)}` : "All titles unlocked"}</span>
-      </div>
-      <div class="cosmetic-list">
-        ${PLAYER_TITLES.map((entry) => `
-          <div class="cosmetic-item ${profile.playerLevel >= entry.level ? "unlocked" : "locked"}">
-            <strong>${escapeHtml(entry.title)}</strong>
-            <span>Lv ${entry.level}</span>
-          </div>
-        `).join("")}
-      </div>
-    </div>
+    <p class="profile-card-hint">Tap the profile image to watch Builder, Gatherer, and Pathfinder connect in chronicle order.</p>
   `;
 }
 
@@ -1003,6 +998,64 @@ function renderHistory() {
     .join("");
 }
 
+function renderStorySlider() {
+  if (!storySlider || !storyCounter) return;
+
+  if (!STORY_IMAGES.length) {
+    storyCounter.textContent = "0 / 0";
+    storySlider.innerHTML = "<p class=\"story-empty\">No story images have been added yet.</p>";
+    return;
+  }
+
+  currentStoryIndex = Math.max(0, Math.min(currentStoryIndex, STORY_IMAGES.length - 1));
+  storyCounter.textContent = `${currentStoryIndex + 1} / ${STORY_IMAGES.length}`;
+  storySlider.innerHTML = `
+    <button type="button" class="story-nav secondary" data-action="story-prev" ${STORY_IMAGES.length > 1 ? "" : "disabled"} aria-label="Previous story image">&larr;</button>
+    <div class="story-slide-shell">
+      ${STORY_IMAGES.map((image, index) => `
+        <figure class="story-slide ${index === currentStoryIndex ? "active" : ""}">
+          <img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.title)}">
+          <figcaption>${escapeHtml(image.title)}</figcaption>
+        </figure>
+      `).join("")}
+    </div>
+    <button type="button" class="story-nav secondary" data-action="story-next" ${STORY_IMAGES.length > 1 ? "" : "disabled"} aria-label="Next story image">&rarr;</button>
+  `;
+}
+
+function renderJourneyModal() {
+  const journey = getJourneyMapData();
+  const pathLength = journey.pathPoints.length > 1 ? getJourneyPathLength(journey.pathPoints) : 0;
+
+  journeyModalContent.innerHTML = `
+    <div class="journey-copy">
+      <p class="eyebrow">Danita's Journey</p>
+      <h2 id="journey-modal-title">Quest Path Chronicle</h2>
+      <p>Each dot is one quest. Completed dots light up, and the gold line connects them in the exact order they were finished.</p>
+    </div>
+    <div class="journey-stage">
+      <svg class="journey-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        ${journey.pathPoints.length > 1 ? `<polyline class="journey-path" style="--path-length:${pathLength.toFixed(2)};" points="${journey.pathPoints.map((point) => `${point.x},${point.y}`).join(" ")}"></polyline>` : ""}
+      </svg>
+      ${journey.nodes.map((node) => `
+        <div
+          class="journey-node ${node.completed ? "completed" : "pending"}"
+          style="--x:${node.x}; --y:${node.y}; --delay:${node.delay}ms;"
+          title="${escapeHtml(node.label)}"
+          aria-label="${escapeHtml(node.label)}"
+        ></div>
+      `).join("")}
+      ${journey.columns.map((column) => `
+        <div class="journey-track-label" style="--x:${column.x};">
+          <strong>${escapeHtml(column.title)}</strong>
+          <span>${escapeHtml(column.progress)}</span>
+        </div>
+      `).join("")}
+    </div>
+    ${journey.completedCount ? "" : "<p class=\"journey-empty\">No completed quests yet. The first finished quest will start the line.</p>"}
+  `;
+}
+
 function getPlayerProfile() {
   const states = TRACKS.map((track) => ({ name: track, ...save.tracks[track] }));
   const totalXp = states.reduce((sum, state) => sum + state.xp, 0);
@@ -1018,6 +1071,76 @@ function getPlayerProfile() {
     strongestPath: QUESTS[strongest.name].title,
     currentTitle
   };
+}
+
+function getJourneyMapData() {
+  const startX = 22;
+  const spacingX = 28;
+  const topY = 12;
+  const bottomY = 78;
+  const columns = TRACKS.map((track, index) => {
+    const total = QUESTS[track].quests.length;
+    const completed = save.tracks[track].completed.length;
+    return {
+      track,
+      x: startX + (index * spacingX),
+      title: QUESTS[track].title,
+      progress: `${completed}/${total} done`,
+      total
+    };
+  });
+
+  const nodes = [];
+  columns.forEach((column) => {
+    const total = Math.max(column.total, 1);
+    for (let index = 0; index < total; index += 1) {
+      const completed = index < save.tracks[column.track].completed.length;
+      const y = total === 1 ? (topY + bottomY) / 2 : topY + ((bottomY - topY) * (index / (total - 1)));
+      nodes.push({
+        track: column.track,
+        questIndex: index,
+        x: column.x,
+        y,
+        completed,
+        delay: 0,
+        label: `${QUESTS[column.track].title} quest ${index + 1}`
+      });
+    }
+  });
+
+  const trackQuestCounts = Object.fromEntries(TRACKS.map((track) => [track, 0]));
+  const pathPoints = [];
+
+  save.history
+    .filter((entry) => TRACKS.includes(entry.track))
+    .forEach((entry, index) => {
+      const questIndex = trackQuestCounts[entry.track];
+      trackQuestCounts[entry.track] += 1;
+
+      const node = nodes.find((item) => item.track === entry.track && item.questIndex === questIndex);
+      if (!node) return;
+
+      node.delay = index * 180;
+      node.label = `${entry.trackTitle}: ${entry.questTitle}`;
+      pathPoints.push({ x: node.x, y: node.y });
+    });
+
+  return {
+    columns,
+    nodes,
+    pathPoints,
+    completedCount: pathPoints.length
+  };
+}
+
+function getJourneyPathLength(points) {
+  let total = 0;
+  for (let index = 1; index < points.length; index += 1) {
+    const dx = points[index].x - points[index - 1].x;
+    const dy = points[index].y - points[index - 1].y;
+    total += Math.sqrt((dx * dx) + (dy * dy));
+  }
+  return total;
 }
 
 function renderTrackHeader(trackName, trackData, state, completedCount, totalCount) {
@@ -1250,6 +1373,27 @@ wishListEl.addEventListener("click", (event) => {
   openWishReadModal(button.dataset.wishId);
 });
 
+storySlider.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-action]");
+  if (!button || !STORY_IMAGES.length) return;
+
+  if (button.dataset.action === "story-prev") {
+    currentStoryIndex = (currentStoryIndex - 1 + STORY_IMAGES.length) % STORY_IMAGES.length;
+    renderStorySlider();
+  }
+
+  if (button.dataset.action === "story-next") {
+    currentStoryIndex = (currentStoryIndex + 1) % STORY_IMAGES.length;
+    renderStorySlider();
+  }
+});
+
+playerCardEl.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-action='open-journey-map']");
+  if (!button) return;
+  openJourneyModal();
+});
+
 revivalModal.addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-action], .modal-backdrop[data-action]");
   if (!button) return;
@@ -1317,6 +1461,12 @@ imageModal.addEventListener("click", (event) => {
   const button = event.target.closest("[data-action='close-image']");
   if (!button) return;
   closeImageModal();
+});
+
+journeyModal.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-action='close-journey']");
+  if (!button) return;
+  closeJourneyModal();
 });
 
 boobooView.addEventListener("submit", (event) => {
@@ -1441,6 +1591,10 @@ document.addEventListener("keydown", (event) => {
     closeWishModal();
   }
 
+  if (event.key === "Escape" && !journeyModal.classList.contains("hidden")) {
+    closeJourneyModal();
+  }
+
   if (event.key === "Escape" && !revivalModal.classList.contains("hidden")) {
     closeRevivalModal();
   }
@@ -1488,6 +1642,19 @@ function closeImageModal() {
   syncBodyModalState();
 }
 
+function openJourneyModal() {
+  journeyModal.classList.remove("hidden");
+  journeyModal.setAttribute("aria-hidden", "false");
+  syncBodyModalState();
+  renderJourneyModal();
+}
+
+function closeJourneyModal() {
+  journeyModal.classList.add("hidden");
+  journeyModal.setAttribute("aria-hidden", "true");
+  syncBodyModalState();
+}
+
 function openWishComposeModal() {
   wishDraft = createWishDraft();
   openWishId = null;
@@ -1516,7 +1683,10 @@ function closeWishModal() {
 }
 
 function syncBodyModalState() {
-  const hasOpenModal = !revivalModal.classList.contains("hidden") || !imageModal.classList.contains("hidden") || !wishModal.classList.contains("hidden");
+  const hasOpenModal = !revivalModal.classList.contains("hidden")
+    || !imageModal.classList.contains("hidden")
+    || !wishModal.classList.contains("hidden")
+    || !journeyModal.classList.contains("hidden");
   document.body.classList.toggle("modal-open", hasOpenModal);
 }
 

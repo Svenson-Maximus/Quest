@@ -75,6 +75,17 @@
             <h2>Danita's Chronicle</h2>
             <div id="history-list" class="history-list"></div>
           </section>
+
+          <section class="story-panel" aria-label="Danita story images">
+            <div class="story-panel-head">
+              <div>
+                <p class="eyebrow">Story Images</p>
+                <h2>Skycraft Memories</h2>
+              </div>
+              <div id="story-counter" class="story-counter">1 / 1</div>
+            </div>
+            <div id="story-slider" class="story-slider"></div>
+          </section>
         </section>
 
         <section id="booboo-view" class="booboo-view hidden" aria-label="Booboo letter approvals"></section>
@@ -105,6 +116,14 @@
         <section class="modal-panel wish-panel" role="dialog" aria-modal="true" aria-labelledby="wish-modal-title">
           <button type="button" class="modal-close" data-action="close-wish" aria-label="Close wish letter">X</button>
           <div id="wish-modal-content"></div>
+        </section>
+      </div>
+
+      <div id="journey-modal" class="modal-shell hidden" aria-hidden="true">
+        <div class="modal-backdrop" data-action="close-journey"></div>
+        <section class="modal-panel journey-panel" role="dialog" aria-modal="true" aria-labelledby="journey-modal-title">
+          <button type="button" class="modal-close" data-action="close-journey" aria-label="Close journey map">X</button>
+          <div id="journey-modal-content"></div>
         </section>
       </div>
 
