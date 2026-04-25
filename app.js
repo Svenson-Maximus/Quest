@@ -658,6 +658,11 @@ function renderWishModal() {
             ${wish.quest.objectives.map((objective) => `<li>${escapeHtml(objective)}</li>`).join("")}
           </ol>
         </section>
+        <div class="wish-actions">
+          <button type="button" data-action="email-wish" data-wish-id="${escapeHtml(wish.id)}">Open Email Draft</button>
+          <button type="button" data-action="copy-wish-email" data-wish-id="${escapeHtml(wish.id)}">Copy Email Text</button>
+          <button type="button" data-action="delete-wish" data-wish-id="${escapeHtml(wish.id)}" class="danger">Delete Letter</button>
+        </div>
       </article>
     `;
     return;
@@ -1060,6 +1065,23 @@ wishModal.addEventListener("click", (event) => {
 
   if (action === "send-wish") {
     submitWishDraft();
+    return;
+  }
+
+  if (action === "email-wish") {
+    const wish = save.wishes.find((entry) => entry.id === button.dataset.wishId);
+    if (wish) sendWishByEmail(wish);
+    return;
+  }
+
+  if (action === "copy-wish-email") {
+    const wish = save.wishes.find((entry) => entry.id === button.dataset.wishId);
+    if (wish) copyWishEmailText(wish);
+    return;
+  }
+
+  if (action === "delete-wish") {
+    deleteWish(button.dataset.wishId);
   }
 });
 
@@ -1223,8 +1245,22 @@ function generateWishQuest(wish) {
 }
 
 function sendWishByEmail(wish) {
+  const payload = buildWishEmailPayload(wish);
+  copyTextToClipboard(payload.body);
+
+  const link = document.createElement("a");
+  link.href = payload.mailtoUrl;
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+function buildWishEmailPayload(wish) {
   const subject = `Wish Letter: ${wish.project}`;
   const body = [
+    `To: ${WISH_LETTER_EMAIL}`,
+    "",
     "Booboo Supply Petition",
     "",
     `Project: ${wish.project}`,
@@ -1246,8 +1282,39 @@ function sendWishByEmail(wish) {
     ...wish.quest.objectives.map((objective) => `- ${objective}`)
   ].join("\n");
 
-  const mailtoUrl = `mailto:${encodeURIComponent(WISH_LETTER_EMAIL)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  window.location.href = mailtoUrl;
+  return {
+    subject,
+    body,
+    mailtoUrl: `mailto:${encodeURIComponent(WISH_LETTER_EMAIL)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+  };
+}
+
+function copyWishEmailText(wish) {
+  const payload = buildWishEmailPayload(wish);
+  copyTextToClipboard(payload.body, "Letter text copied.");
+}
+
+function copyTextToClipboard(text, successMessage = "Email text copied in case mail did not open.") {
+  if (!navigator.clipboard?.writeText) {
+    return;
+  }
+
+  navigator.clipboard.writeText(text)
+    .then(() => {
+      window.alert(successMessage);
+    })
+    .catch(() => {});
+}
+
+function deleteWish(wishId) {
+  const wish = save.wishes.find((entry) => entry.id === wishId);
+  if (!wish) return;
+  if (!window.confirm(`Delete the letter for "${wish.project}"?`)) return;
+
+  save.wishes = save.wishes.filter((entry) => entry.id !== wishId);
+  persist();
+  render();
+  closeWishModal();
 }
 
 function startRevivalJourney() {

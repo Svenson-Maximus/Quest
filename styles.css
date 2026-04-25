@@ -38,11 +38,16 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: -3;
+  z-index: -1;
   background:
     radial-gradient(circle at 28% 18%, rgba(184, 215, 216, 0.16), transparent 24rem),
     linear-gradient(145deg, rgba(54, 89, 71, 0.22), transparent 42%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.38));
+}
+
+main {
+  position: relative;
+  z-index: 1;
 }
 
 button, input, label.import-button { font: inherit; }
@@ -100,7 +105,7 @@ button.danger {
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  z-index: -2;
+  z-index: 0;
 }
 
 .block-sky::before {
