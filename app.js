@@ -12,13 +12,21 @@ const TRACK_IMAGES = {
 };
 const PROFILE_CARD_IMAGE = "profilecard.png";
 const MEMORY_NOTE_KEY = "danitas-memory-notes-v1";
-const SKILL_TREE_LINE_DURATION = 1400;
-const SKILL_TREE_NODE_DURATION = 520;
-const SKILL_TREE_STEP_GAP = 220;
+const SKILL_TREE_LINE_DURATION = 1050;
+const SKILL_TREE_NODE_DURATION = 420;
+const SKILL_TREE_STEP_GAP = 150;
 const STORY_IMAGES = [
   {
     src: "storyimages/image.png",
     title: "Skycraft Memory I"
+  },
+  {
+    src: "storyimages/image(1).png",
+    title: "Skycraft Memory II"
+  },
+  {
+    src: "storyimages/image(2).png",
+    title: "Skycraft Memory III"
   }
 ];
 const QUEST_ACTIVATION_SOUND = "minecraft-sound-effects-chest-sound-effect.mp3";
@@ -66,6 +74,7 @@ const revivalContent = document.querySelector("#revival-content");
 const imageModal = document.querySelector("#image-modal");
 const imageModalTitle = document.querySelector("#image-modal-title");
 const imageModalPreview = document.querySelector("#image-modal-preview");
+const imageModalCopy = document.querySelector(".image-modal-copy");
 const playerCardEl = document.querySelector("#player-card");
 const skillTreeCard = document.querySelector("#skill-tree-card");
 const wishBoardButton = document.querySelector("#wish-board-button");
@@ -163,6 +172,7 @@ let currentStoryIndex = 0;
 let menuOpen = false;
 let memoryNotes = loadMemoryNotes();
 let skillTreeAnimated = false;
+let imageModalState = null;
 
 populateBlockSky();
 
@@ -814,7 +824,9 @@ function renderPlayerCard() {
     </div>
     <div class="player-level-medallion card-corner">Lv ${profile.playerLevel}</div>
     <div class="profile-card-button">
-      <img class="profile-card-image" src="${PROFILE_CARD_IMAGE}" alt="${escapeHtml(save.player)} profile card">
+      <button type="button" class="profile-card-image-button" data-action="open-profile-image" aria-label="Open ${escapeHtml(save.player)} profile card larger">
+        <img class="profile-card-image" src="${PROFILE_CARD_IMAGE}" alt="${escapeHtml(save.player)} profile card">
+      </button>
       <div class="profile-card-overlay">
         <strong>${escapeHtml(save.player)}</strong>
         <span>Danita</span>
@@ -1023,7 +1035,9 @@ function renderStorySlider() {
       <div class="story-slide-shell">
         ${STORY_IMAGES.map((image, index) => `
           <figure class="story-slide ${index === currentStoryIndex ? "active" : ""}">
-            <img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.title)}">
+            <button type="button" class="story-image-button" data-action="open-story-image" data-index="${index}" aria-label="Open ${escapeHtml(image.title)} larger">
+              <img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.title)}">
+            </button>
             <figcaption>${escapeHtml(image.title)}</figcaption>
           </figure>
         `).join("")}
@@ -1058,7 +1072,8 @@ function renderSkillTreeCard() {
       <p><strong>Strongest Path:</strong> ${escapeHtml(profile.strongestPath)}</p>
       <p><strong>Next Cosmetic:</strong> ${nextTitle ? `${escapeHtml(nextTitle.title)} at Lv ${nextTitle.level}` : "All titles unlocked"}</p>
     </div>
-    <div class="journey-stage ${skillTreeAnimated ? "animated" : ""}">
+    <div class="journey-stage ${skillTreeAnimated ? "animated" : ""}" style="--journey-scale:${journey.scale};">
+      <div class="journey-stage-inner">
         ${journey.columns.map((column) => `
           <div class="journey-track-label top" style="--x:${column.x};">
             <strong>${escapeHtml(column.title)}</strong>
@@ -1085,6 +1100,7 @@ function renderSkillTreeCard() {
             aria-label="${escapeHtml(node.label)}"
           ></div>
         `).join("")}
+      </div>
     </div>
     <div class="skill-tree-crests">
       ${TRACKS.map((track) => `
@@ -1203,11 +1219,15 @@ function getJourneyMapData() {
     elapsed += SKILL_TREE_NODE_DURATION + SKILL_TREE_STEP_GAP;
   });
 
+  const maxNodeY = nodes.length ? Math.max(...nodes.map((node) => node.y)) : topY;
+  const scale = Math.min(1, 90 / Math.max(maxNodeY, 90));
+
   return {
     columns,
     nodes,
     segments,
-    completedCount: orderedProgress.length
+    completedCount: orderedProgress.length,
+    scale: scale.toFixed(3)
   };
 }
 
@@ -1505,6 +1525,12 @@ storySlider.addEventListener("click", (event) => {
     currentStoryIndex = (currentStoryIndex + 1) % STORY_IMAGES.length;
     renderStorySlider();
   }
+
+  if (button.dataset.action === "open-story-image") {
+    const index = Number.parseInt(button.dataset.index || "", 10);
+    if (!Number.isFinite(index) || !STORY_IMAGES[index]) return;
+    openStoryImageModal(index);
+  }
 });
 
 storySlider.addEventListener("input", (event) => {
@@ -1519,6 +1545,12 @@ skillTreeCard.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-action='play-skill-tree']");
   if (!button) return;
   playSkillTreeAnimation();
+});
+
+playerCardEl.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-action='open-profile-image']");
+  if (!button) return;
+  openProfileImageModal();
 });
 
 revivalModal.addEventListener("click", async (event) => {
@@ -1585,9 +1617,21 @@ revivalModal.addEventListener("change", (event) => {
 });
 
 imageModal.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-action='close-image']");
+  const button = event.target.closest("[data-action]");
   if (!button) return;
-  closeImageModal();
+  if (button.dataset.action === "close-image") {
+    closeImageModal();
+    return;
+  }
+
+  if (button.dataset.action === "edit-memory-note") {
+    setImageModalNoteEditMode(true);
+    return;
+  }
+
+  if (button.dataset.action === "save-memory-note") {
+    saveImageModalNote();
+  }
 });
 
 boobooView.addEventListener("submit", (event) => {
@@ -1748,12 +1792,83 @@ function openTrackImageModal(trackName) {
   const imageSrc = TRACK_IMAGES[trackName];
   if (!trackData || !imageSrc) return;
 
+  imageModalState = { type: "track", trackName };
   imageModalTitle.textContent = trackData.title;
   imageModalPreview.src = imageSrc;
   imageModalPreview.alt = `${trackData.title} crest`;
+  imageModalCopy.innerHTML = `
+    <p class="eyebrow">Track Crest</p>
+    <h2 id="image-modal-title">${escapeHtml(trackData.title)}</h2>
+  `;
   imageModal.classList.remove("hidden");
   imageModal.setAttribute("aria-hidden", "false");
   syncBodyModalState();
+}
+
+function openProfileImageModal() {
+  imageModalState = { type: "profile" };
+  imageModalPreview.src = PROFILE_CARD_IMAGE;
+  imageModalPreview.alt = `${save.player} profile card`;
+  imageModalCopy.innerHTML = `
+    <p class="eyebrow">Player Card</p>
+    <h2 id="image-modal-title">${escapeHtml(save.player)}</h2>
+  `;
+  imageModal.classList.remove("hidden");
+  imageModal.setAttribute("aria-hidden", "false");
+  syncBodyModalState();
+}
+
+function openStoryImageModal(index) {
+  const story = STORY_IMAGES[index];
+  if (!story) return;
+
+  imageModalState = {
+    type: "story",
+    index,
+    editing: false
+  };
+  imageModalPreview.src = story.src;
+  imageModalPreview.alt = story.title;
+  renderStoryImageModalCopy();
+  imageModal.classList.remove("hidden");
+  imageModal.setAttribute("aria-hidden", "false");
+  syncBodyModalState();
+}
+
+function renderStoryImageModalCopy() {
+  if (!imageModalState || imageModalState.type !== "story") return;
+  const story = STORY_IMAGES[imageModalState.index];
+  if (!story) return;
+  const note = memoryNotes[story.src] || "";
+
+  imageModalCopy.innerHTML = `
+    <p class="eyebrow">Story Memory</p>
+    <h2 id="image-modal-title">${escapeHtml(story.title)}</h2>
+    <div class="image-modal-note-tools">
+      <button type="button" data-action="edit-memory-note" class="secondary" ${imageModalState.editing ? "disabled" : ""}>Edit Note</button>
+      <button type="button" data-action="save-memory-note" ${imageModalState.editing ? "" : "disabled"}>Save Note</button>
+    </div>
+    <label class="field-label" for="image-modal-note">Memory Note</label>
+    <textarea id="image-modal-note" class="image-modal-note-input" ${imageModalState.editing ? "" : "disabled"}>${escapeHtml(note)}</textarea>
+  `;
+}
+
+function setImageModalNoteEditMode(editing) {
+  if (!imageModalState || imageModalState.type !== "story") return;
+  imageModalState.editing = editing;
+  renderStoryImageModalCopy();
+}
+
+function saveImageModalNote() {
+  if (!imageModalState || imageModalState.type !== "story") return;
+  const story = STORY_IMAGES[imageModalState.index];
+  const input = imageModal.querySelector("#image-modal-note");
+  if (!story || !(input instanceof HTMLTextAreaElement)) return;
+  memoryNotes[story.src] = input.value;
+  persistMemoryNotes();
+  imageModalState.editing = false;
+  renderStoryImageModalCopy();
+  renderStorySlider();
 }
 
 function closeImageModal() {
@@ -1761,6 +1876,7 @@ function closeImageModal() {
   imageModal.setAttribute("aria-hidden", "true");
   imageModalPreview.src = "";
   imageModalPreview.alt = "";
+  imageModalState = null;
   syncBodyModalState();
 }
 
