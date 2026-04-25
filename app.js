@@ -1236,14 +1236,49 @@ function loadMemoryNotes() {
     const raw = localStorage.getItem(MEMORY_NOTE_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : {};
+    return normalizeMemoryNotes(parsed);
   } catch {
     return {};
   }
 }
 
+function normalizeMemoryNotes(candidate) {
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(candidate)
+      .filter(([key]) => typeof key === "string" && key)
+      .map(([key, value]) => [key, typeof value === "string" ? value : String(value ?? "")])
+  );
+}
+
 function persistMemoryNotes() {
   localStorage.setItem(MEMORY_NOTE_KEY, JSON.stringify(memoryNotes, null, 2));
+}
+
+function buildExportPayload() {
+  return {
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    save,
+    memoryNotes
+  };
+}
+
+function parseImportedPayload(candidate) {
+  if (candidate && typeof candidate === "object" && !Array.isArray(candidate) && candidate.save) {
+    return {
+      save: normalizeSave(candidate.save),
+      memoryNotes: normalizeMemoryNotes(candidate.memoryNotes)
+    };
+  }
+
+  return {
+    save: normalizeSave(candidate),
+    memoryNotes: {}
+  };
 }
 
 function playSkillTreeAnimation() {
@@ -2657,7 +2692,7 @@ async function copySingleCommand(button) {
 
 exportButton.addEventListener("click", () => {
   playPageEntrySound();
-  const blob = new Blob([JSON.stringify(save, null, 2)], { type: "application/json" });
+  const blob = new Blob([JSON.stringify(buildExportPayload(), null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -2671,8 +2706,11 @@ importInput.addEventListener("change", async () => {
   if (!file) return;
   try {
     const text = await file.text();
-    save = normalizeSave(JSON.parse(text));
+    const imported = parseImportedPayload(JSON.parse(text));
+    save = imported.save;
+    memoryNotes = imported.memoryNotes;
     persist();
+    persistMemoryNotes();
     render();
     closeRevivalModal();
   } catch {
