@@ -17,6 +17,7 @@ const QUEST_COMPLETE_SOUND_END = 4.9;
 const PAGE_ENTRY_SOUND = "skairin.mp3";
 const LEVEL_UP_SOUND = "42dfb7_skyrim_level_up_sound_effect.mp3";
 const WISH_LETTER_EMAIL = "sv3nleutenegger@gmail.com";
+const SKY_PARTICLE_COUNT = 200;
 const PLAYER_TITLES = [
   { level: 1, title: "Hearthbound Wanderer", flavor: "The road has only just begun." },
   { level: 3, title: "Lantern Bearer", flavor: "Small duties now glow like proper vows." },
@@ -29,6 +30,7 @@ const PLAYER_TITLES = [
 
 const gate = document.querySelector("#gate");
 const app = document.querySelector("#app");
+const blockSky = document.querySelector(".block-sky");
 const passwordForm = document.querySelector("#password-form");
 const passwordInput = document.querySelector("#password");
 const passwordMessage = document.querySelector("#password-message");
@@ -138,6 +140,8 @@ let wishDraft = createWishDraft();
 let openWishId = null;
 let wishModalMode = "compose";
 
+populateBlockSky();
+
 function defaultSave() {
   const tracks = {};
   TRACKS.forEach((track) => {
@@ -216,6 +220,32 @@ function createWishDraft() {
     bribe: "",
     materials: Array.from({ length: 4 }, () => ({ name: "", quantity: "" }))
   };
+}
+
+function populateBlockSky() {
+  if (!blockSky) return;
+
+  const fragment = document.createDocumentFragment();
+  for (let index = 0; index < SKY_PARTICLE_COUNT; index += 1) {
+    const particle = document.createElement("span");
+    const size = 2 + Math.random() * 4;
+    const glow = 10 + Math.random() * 14;
+    const duration = 10 + Math.random() * 16;
+    const drift = Math.random() < 0.2 ? "rgba(240, 242, 214, 0.62)" : "rgba(184, 215, 216, 0.62)";
+
+    particle.style.setProperty("--left", `${Math.random() * 100}%`);
+    particle.style.setProperty("--top", `${-4 - Math.random() * 18}%`);
+    particle.style.setProperty("--size", `${size.toFixed(2)}px`);
+    particle.style.setProperty("--duration", `${duration.toFixed(2)}s`);
+    particle.style.setProperty("--delay", `${(-Math.random() * duration).toFixed(2)}s`);
+    particle.style.setProperty("--particle-opacity", (0.45 + Math.random() * 0.45).toFixed(2));
+    particle.style.setProperty("--glow", `${glow.toFixed(2)}px`);
+    particle.style.setProperty("--particle-glow", drift);
+    particle.style.setProperty("--particle-color", Math.random() < 0.14 ? "rgba(255, 246, 210, 0.84)" : "rgba(240, 246, 244, 0.78)");
+    fragment.appendChild(particle);
+  }
+
+  blockSky.replaceChildren(fragment);
 }
 
 function normalizeWish(candidate) {
