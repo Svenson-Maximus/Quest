@@ -28,48 +28,33 @@
 
       <section id="app" class="app-shell hidden">
         <header class="app-header">
-          <div>
+          <div class="app-header-copy">
             <p class="eyebrow">Skycraft Quests</p>
             <h1 id="main-title" class="main-title">Danita's Skycraft Quests</h1>
             <p class="intro">Te amo mi amor enjoy :) - booboo</p>
-          </div>
-          <div class="header-actions">
-            <button id="danita-view-button" type="button" class="secondary hidden">Danita View</button>
-            <button id="booboo-view-button" type="button" class="secondary">Booboo View</button>
-            <button id="revival-button" type="button" class="icon-button revival-button" aria-label="Open revival rites">
-              <span aria-hidden="true">&#9760;</span>
-            </button>
-            <button id="wish-button" type="button">Wish Letter</button>
-            <button id="export-save" type="button">Export Save</button>
-            <label class="import-button" for="import-save">Import Save</label>
-            <input id="import-save" type="file" accept="application/json">
-            <button id="reset-save" type="button" class="danger">Reset Progress</button>
+            <section id="player-card" class="player-card header-player-card" aria-label="Danita player card"></section>
+            <div class="menu-shell">
+              <button id="menu-toggle" type="button" class="menu-toggle" aria-expanded="false" aria-controls="header-actions">
+                <img src="danitadance.gif" alt="Open menu" class="menu-toggle-gif">
+                <span>Menu</span>
+              </button>
+              <div id="header-actions" class="header-actions hidden">
+                <button id="danita-view-button" type="button" class="secondary hidden">Home View</button>
+                <button id="journey-view-button" type="button" class="secondary">Journey Tree</button>
+                <button id="booboo-view-button" type="button" class="secondary">Booboo View</button>
+                <button id="revival-button" type="button" class="secondary revival-button">Revival Rites</button>
+                <button id="wish-button" type="button">Wish Letter</button>
+                <button id="export-save" type="button">Export Save</button>
+                <label class="import-button" for="import-save">Import Save</label>
+                <input id="import-save" type="file" accept="application/json">
+                <button id="reset-save" type="button" class="danger">Reset Progress</button>
+              </div>
+            </div>
           </div>
         </header>
 
         <section id="danita-view">
-          <section class="player-dashboard">
-            <section id="player-card" class="player-card" aria-label="Danita player card"></section>
-          </section>
-
-          <section class="wish-board" aria-label="Booboo wish letters">
-            <div class="wish-board-head">
-              <div>
-                <p class="eyebrow">Booboo Requests</p>
-                <h2>Wish Letters</h2>
-              </div>
-              <button id="wish-board-button" type="button">Write New Letter</button>
-            </div>
-            <div id="wish-list" class="wish-list"></div>
-          </section>
-
           <section id="tracks" class="tracks" aria-label="Active quest tracks"></section>
-
-          <section class="summary-panel" aria-label="Danita's progress summary">
-            <div><span id="total-complete">0</span><p>Quests Completed</p></div>
-            <div><span id="highest-level">1</span><p>Highest Path Level</p></div>
-            <div><span id="current-focus">The Hearth</span><p>Strongest Path</p></div>
-          </section>
 
           <section class="history-panel">
             <h2>Danita's Chronicle</h2>
@@ -86,8 +71,20 @@
             </div>
             <div id="story-slider" class="story-slider"></div>
           </section>
+
+          <section class="wish-board" aria-label="Booboo wish letters">
+            <div class="wish-board-head">
+              <div>
+                <p class="eyebrow">Booboo Requests</p>
+                <h2>Wish Letters</h2>
+              </div>
+              <button id="wish-board-button" type="button">Write New Letter</button>
+            </div>
+            <div id="wish-list" class="wish-list"></div>
+          </section>
         </section>
 
+        <section id="journey-view" class="journey-view hidden" aria-label="Danita journey tree"></section>
         <section id="booboo-view" class="booboo-view hidden" aria-label="Booboo letter approvals"></section>
       </section>
 
@@ -116,14 +113,6 @@
         <section class="modal-panel wish-panel" role="dialog" aria-modal="true" aria-labelledby="wish-modal-title">
           <button type="button" class="modal-close" data-action="close-wish" aria-label="Close wish letter">X</button>
           <div id="wish-modal-content"></div>
-        </section>
-      </div>
-
-      <div id="journey-modal" class="modal-shell hidden" aria-hidden="true">
-        <div class="modal-backdrop" data-action="close-journey"></div>
-        <section class="modal-panel journey-panel" role="dialog" aria-modal="true" aria-labelledby="journey-modal-title">
-          <button type="button" class="modal-close" data-action="close-journey" aria-label="Close journey map">X</button>
-          <div id="journey-modal-content"></div>
         </section>
       </div>
 

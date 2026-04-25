@@ -45,17 +45,18 @@ const tracksEl = document.querySelector("#tracks");
 const historyList = document.querySelector("#history-list");
 const storySlider = document.querySelector("#story-slider");
 const storyCounter = document.querySelector("#story-counter");
-const totalCompleteEl = document.querySelector("#total-complete");
-const highestLevelEl = document.querySelector("#highest-level");
-const currentFocusEl = document.querySelector("#current-focus");
 const exportButton = document.querySelector("#export-save");
 const importInput = document.querySelector("#import-save");
 const resetButton = document.querySelector("#reset-save");
 const mainTitle = document.querySelector("#main-title");
 const danitaView = document.querySelector("#danita-view");
+const journeyView = document.querySelector("#journey-view");
 const boobooView = document.querySelector("#booboo-view");
+const menuToggle = document.querySelector("#menu-toggle");
+const headerActions = document.querySelector("#header-actions");
 const boobooViewButton = document.querySelector("#booboo-view-button");
 const danitaViewButton = document.querySelector("#danita-view-button");
+const journeyViewButton = document.querySelector("#journey-view-button");
 const revivalButton = document.querySelector("#revival-button");
 const wishButton = document.querySelector("#wish-button");
 const revivalModal = document.querySelector("#revival-modal");
@@ -68,8 +69,6 @@ const wishBoardButton = document.querySelector("#wish-board-button");
 const wishListEl = document.querySelector("#wish-list");
 const wishModal = document.querySelector("#wish-modal");
 const wishModalContent = document.querySelector("#wish-modal-content");
-const journeyModal = document.querySelector("#journey-modal");
-const journeyModalContent = document.querySelector("#journey-modal-content");
 
 const REVIVAL_LEVEL_RITUALS = [
   {
@@ -158,6 +157,7 @@ let currentView = "danita";
 let selectedBoobooWishId = null;
 let boobooUnlocked = false;
 let currentStoryIndex = 0;
+let menuOpen = false;
 
 populateBlockSky();
 
@@ -497,12 +497,11 @@ function render() {
   renderPlayerCard();
   renderWishBoard();
   renderBoobooView();
-  renderSummary();
   renderHistory();
   renderStorySlider();
   renderRevivalModal();
   renderWishModal();
-  renderJourneyModal();
+  renderJourneyView();
   syncViewState();
 }
 
@@ -685,11 +684,18 @@ function renderApprovedItemRow(entry, index) {
 }
 
 function syncViewState() {
+  const showDanita = currentView === "danita";
+  const showJourney = currentView === "journey";
   const showBooboo = currentView === "booboo";
-  danitaView.classList.toggle("hidden", showBooboo);
+
+  danitaView.classList.toggle("hidden", !showDanita);
+  journeyView.classList.toggle("hidden", !showJourney);
   boobooView.classList.toggle("hidden", !showBooboo);
+  danitaViewButton.classList.toggle("hidden", showDanita);
+  journeyViewButton.classList.toggle("hidden", showJourney);
   boobooViewButton.classList.toggle("hidden", showBooboo);
-  danitaViewButton.classList.toggle("hidden", !showBooboo);
+  headerActions.classList.toggle("hidden", !menuOpen);
+  menuToggle.setAttribute("aria-expanded", String(menuOpen));
 }
 
 function renderTrack(trackName) {
@@ -793,18 +799,9 @@ function renderStats(state, completedCount, totalCount) {
   `;
 }
 
-function renderSummary() {
-  const states = TRACKS.map((track) => ({ name: track, ...save.tracks[track] }));
-  const totalComplete = states.reduce((sum, state) => sum + state.completed.length, 0);
-  const highest = Math.max(...states.map((state) => state.level));
-  const leader = states.slice().sort((a, b) => b.level - a.level || b.xp - a.xp)[0];
-  totalCompleteEl.textContent = totalComplete;
-  highestLevelEl.textContent = highest;
-  currentFocusEl.textContent = QUESTS[leader.name].title;
-}
-
 function renderPlayerCard() {
   const profile = getPlayerProfile();
+  const nextTitle = PLAYER_TITLES.find((entry) => entry.level > profile.playerLevel);
 
   playerCardEl.innerHTML = `
     <div class="player-card-head">
@@ -812,13 +809,13 @@ function renderPlayerCard() {
         <p class="eyebrow">Player Card</p>
         <h2>${escapeHtml(save.player)}</h2>
       </div>
+      <div class="player-level-medallion">Lv ${profile.playerLevel}</div>
     </div>
     <button type="button" class="profile-card-button" data-action="open-journey-map" aria-label="Open Danita's journey map">
       <img class="profile-card-image" src="${PROFILE_CARD_IMAGE}" alt="${escapeHtml(save.player)} profile card">
-      <div class="player-level-medallion compact">Lv ${profile.playerLevel}</div>
       <div class="profile-card-overlay">
         <strong>${escapeHtml(save.player)}</strong>
-        <span>Open Journey Map</span>
+        <span>Open Skill Tree</span>
       </div>
     </button>
     <div class="player-card-caption">
@@ -826,7 +823,15 @@ function renderPlayerCard() {
       <strong>${escapeHtml(profile.currentTitle.title)}</strong>
       <span>${escapeHtml(profile.currentTitle.flavor)}</span>
     </div>
-    <p class="profile-card-hint">Tap the profile image to watch Builder, Gatherer, and Pathfinder connect in chronicle order.</p>
+    <div class="player-card-meta">
+      <p><strong>Overall Level:</strong> ${profile.playerLevel}</p>
+      <p><strong>Total XP:</strong> ${profile.totalXp}</p>
+      <p><strong>Quests Completed:</strong> ${profile.totalComplete}</p>
+      <p><strong>Highest Path Level:</strong> ${profile.highestPathLevel}</p>
+      <p><strong>Strongest Path:</strong> ${escapeHtml(profile.strongestPath)}</p>
+      <p><strong>Next Cosmetic:</strong> ${nextTitle ? `${escapeHtml(nextTitle.title)} at Lv ${nextTitle.level}` : "All titles unlocked"}</p>
+    </div>
+    <p class="profile-card-hint">Tap the profile image to open the skill-tree journey view.</p>
   `;
 }
 
@@ -1023,36 +1028,45 @@ function renderStorySlider() {
   `;
 }
 
-function renderJourneyModal() {
+function renderJourneyView() {
   const journey = getJourneyMapData();
-  const pathLength = journey.pathPoints.length > 1 ? getJourneyPathLength(journey.pathPoints) : 0;
-
-  journeyModalContent.innerHTML = `
-    <div class="journey-copy">
-      <p class="eyebrow">Danita's Journey</p>
-      <h2 id="journey-modal-title">Quest Path Chronicle</h2>
-      <p>Each dot is one quest. Completed dots light up, and the gold line connects them in the exact order they were finished.</p>
-    </div>
-    <div class="journey-stage">
-      <svg class="journey-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-        ${journey.pathPoints.length > 1 ? `<polyline class="journey-path" style="--path-length:${pathLength.toFixed(2)};" points="${journey.pathPoints.map((point) => `${point.x},${point.y}`).join(" ")}"></polyline>` : ""}
-      </svg>
-      ${journey.nodes.map((node) => `
-        <div
-          class="journey-node ${node.completed ? "completed" : "pending"}"
-          style="--x:${node.x}; --y:${node.y}; --delay:${node.delay}ms;"
-          title="${escapeHtml(node.label)}"
-          aria-label="${escapeHtml(node.label)}"
-        ></div>
-      `).join("")}
-      ${journey.columns.map((column) => `
-        <div class="journey-track-label" style="--x:${column.x};">
-          <strong>${escapeHtml(column.title)}</strong>
-          <span>${escapeHtml(column.progress)}</span>
-        </div>
-      `).join("")}
-    </div>
-    ${journey.completedCount ? "" : "<p class=\"journey-empty\">No completed quests yet. The first finished quest will start the line.</p>"}
+  journeyView.innerHTML = `
+    <section class="journey-page">
+      <div class="journey-copy">
+        <p class="eyebrow">Danita's Journey</p>
+        <h2>Quest Skill Tree</h2>
+        <p>The paths light up in the exact order the quests were completed, with each path drawn like its own Skyrim-style branch.</p>
+      </div>
+      <div class="journey-stage">
+        ${journey.columns.map((column) => `
+          <div class="journey-track-label top" style="--x:${column.x};">
+            <strong>${escapeHtml(column.title)}</strong>
+            <span>${escapeHtml(column.progress)}</span>
+          </div>
+        `).join("")}
+        <svg class="journey-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          ${journey.segments.map((segment) => `
+            <line
+              class="journey-path ${escapeHtml(segment.track)}"
+              style="--path-length:${segment.length.toFixed(2)};"
+              x1="${segment.from.x}"
+              y1="${segment.from.y}"
+              x2="${segment.to.x}"
+              y2="${segment.to.y}"
+            ></line>
+          `).join("")}
+        </svg>
+        ${journey.nodes.map((node) => `
+          <div
+            class="journey-node completed ${escapeHtml(node.track)}"
+            style="--x:${node.x}; --y:${node.y}; --delay:${node.delay}ms;"
+            title="${escapeHtml(node.label)}"
+            aria-label="${escapeHtml(node.label)}"
+          ></div>
+        `).join("")}
+      </div>
+      ${journey.completedCount ? "" : "<p class=\"journey-empty\">No completed quests yet. Finish a quest and the first branch will appear here.</p>"}
+    </section>
   `;
 }
 
@@ -1062,46 +1076,44 @@ function getPlayerProfile() {
   const totalComplete = states.reduce((sum, state) => sum + state.completed.length, 0);
   const playerLevel = Math.floor(totalXp / 300) + 1;
   const strongest = states.slice().sort((a, b) => b.level - a.level || b.xp - a.xp)[0];
+  const highestPathLevel = Math.max(...states.map((state) => state.level));
   const currentTitle = PLAYER_TITLES.filter((entry) => entry.level <= playerLevel).slice(-1)[0] || PLAYER_TITLES[0];
 
   return {
     totalXp,
     totalComplete,
     playerLevel,
+    highestPathLevel,
     strongestPath: QUESTS[strongest.name].title,
     currentTitle
   };
 }
 
 function getJourneyMapData() {
-  const startX = 22;
-  const spacingX = 28;
-  const topY = 12;
-  const bottomY = 78;
+  const startX = 18;
+  const spacingX = 32;
+  const topY = 28;
+  const stepY = 14;
   const columns = TRACKS.map((track, index) => {
-    const total = QUESTS[track].quests.length;
     const completed = save.tracks[track].completed.length;
     return {
       track,
       x: startX + (index * spacingX),
       title: QUESTS[track].title,
-      progress: `${completed}/${total} done`,
-      total
+      progress: `${completed} done`
     };
   });
 
   const nodes = [];
   columns.forEach((column) => {
-    const total = Math.max(column.total, 1);
+    const total = save.tracks[column.track].completed.length;
     for (let index = 0; index < total; index += 1) {
-      const completed = index < save.tracks[column.track].completed.length;
-      const y = total === 1 ? (topY + bottomY) / 2 : topY + ((bottomY - topY) * (index / (total - 1)));
+      const y = topY + (index * stepY);
       nodes.push({
         track: column.track,
         questIndex: index,
         x: column.x,
         y,
-        completed,
         delay: 0,
         label: `${QUESTS[column.track].title} quest ${index + 1}`
       });
@@ -1125,10 +1137,29 @@ function getJourneyMapData() {
       pathPoints.push({ x: node.x, y: node.y });
     });
 
+  const segments = [];
+  TRACKS.forEach((track) => {
+    const trackNodes = nodes
+      .filter((node) => node.track === track)
+      .sort((a, b) => a.questIndex - b.questIndex);
+
+    for (let index = 1; index < trackNodes.length; index += 1) {
+      const from = trackNodes[index - 1];
+      const to = trackNodes[index];
+      segments.push({
+        track,
+        from,
+        to,
+        length: Math.sqrt(((to.x - from.x) ** 2) + ((to.y - from.y) ** 2))
+      });
+    }
+  });
+
   return {
     columns,
     nodes,
     pathPoints,
+    segments,
     completedCount: pathPoints.length
   };
 }
@@ -1345,21 +1376,38 @@ tracksEl.addEventListener("change", (event) => {
 });
 
 revivalButton.addEventListener("click", () => {
+  menuOpen = false;
+  syncViewState();
   openRevivalModal();
+});
+
+menuToggle.addEventListener("click", () => {
+  menuOpen = !menuOpen;
+  syncViewState();
 });
 
 boobooViewButton.addEventListener("click", () => {
   currentView = "booboo";
+  menuOpen = false;
   render();
 });
 
 danitaViewButton.addEventListener("click", () => {
   lockBoobooView();
   currentView = "danita";
+  menuOpen = false;
+  render();
+});
+
+journeyViewButton.addEventListener("click", () => {
+  currentView = "journey";
+  menuOpen = false;
   render();
 });
 
 wishButton.addEventListener("click", () => {
+  menuOpen = false;
+  syncViewState();
   openWishComposeModal();
 });
 
@@ -1391,7 +1439,9 @@ storySlider.addEventListener("click", (event) => {
 playerCardEl.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-action='open-journey-map']");
   if (!button) return;
-  openJourneyModal();
+  currentView = "journey";
+  menuOpen = false;
+  render();
 });
 
 revivalModal.addEventListener("click", async (event) => {
@@ -1461,12 +1511,6 @@ imageModal.addEventListener("click", (event) => {
   const button = event.target.closest("[data-action='close-image']");
   if (!button) return;
   closeImageModal();
-});
-
-journeyModal.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-action='close-journey']");
-  if (!button) return;
-  closeJourneyModal();
 });
 
 boobooView.addEventListener("submit", (event) => {
@@ -1591,12 +1635,13 @@ document.addEventListener("keydown", (event) => {
     closeWishModal();
   }
 
-  if (event.key === "Escape" && !journeyModal.classList.contains("hidden")) {
-    closeJourneyModal();
-  }
-
   if (event.key === "Escape" && !revivalModal.classList.contains("hidden")) {
     closeRevivalModal();
+  }
+
+  if (event.key === "Escape" && menuOpen) {
+    menuOpen = false;
+    syncViewState();
   }
 });
 
@@ -1642,19 +1687,6 @@ function closeImageModal() {
   syncBodyModalState();
 }
 
-function openJourneyModal() {
-  journeyModal.classList.remove("hidden");
-  journeyModal.setAttribute("aria-hidden", "false");
-  syncBodyModalState();
-  renderJourneyModal();
-}
-
-function closeJourneyModal() {
-  journeyModal.classList.add("hidden");
-  journeyModal.setAttribute("aria-hidden", "true");
-  syncBodyModalState();
-}
-
 function openWishComposeModal() {
   wishDraft = createWishDraft();
   openWishId = null;
@@ -1685,8 +1717,7 @@ function closeWishModal() {
 function syncBodyModalState() {
   const hasOpenModal = !revivalModal.classList.contains("hidden")
     || !imageModal.classList.contains("hidden")
-    || !wishModal.classList.contains("hidden")
-    || !journeyModal.classList.contains("hidden");
+    || !wishModal.classList.contains("hidden");
   document.body.classList.toggle("modal-open", hasOpenModal);
 }
 
