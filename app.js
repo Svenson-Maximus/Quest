@@ -1262,13 +1262,20 @@ function launchLevelUpDance() {
 
   const dance = document.createElement("div");
   dance.className = "level-up-dance";
-  dance.setAttribute("aria-hidden", "true");
+  dance.setAttribute("role", "dialog");
+  dance.setAttribute("aria-modal", "true");
+  dance.setAttribute("aria-label", "Level up celebration");
   dance.innerHTML = `
-    <img src="danitadance.gif" alt="">
+    <img src="danitadance.gif" alt="Danita dancing">
     <strong>Level Up</strong>
+    <button type="button" class="level-up-close">Back To Quests</button>
   `;
+  dance.addEventListener("click", (event) => {
+    const button = event.target.closest(".level-up-close");
+    if (!button) return;
+    dance.remove();
+  });
   document.body.appendChild(dance);
-  window.setTimeout(() => dance.remove(), 7000);
 }
 
 function renderTrackHeader(trackName, trackData, state, completedCount, totalCount) {
