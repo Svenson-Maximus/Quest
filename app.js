@@ -16,6 +16,7 @@ const QUEST_COMPLETE_SOUND_START = 4.3;
 const QUEST_COMPLETE_SOUND_END = 4.9;
 const PAGE_ENTRY_SOUND = "skairin.mp3";
 const LEVEL_UP_SOUND = "42dfb7_skyrim_level_up_sound_effect.mp3";
+const WISH_LETTER_EMAIL = "sv3nleutenegger@gmail.com";
 const PLAYER_TITLES = [
   { level: 1, title: "Hearthbound Wanderer", flavor: "The road has only just begun." },
   { level: 3, title: "Lantern Bearer", flavor: "Small duties now glow like proper vows." },
@@ -1171,6 +1172,7 @@ function submitWishDraft() {
   persist();
   render();
   openWishReadModal(wish.id);
+  sendWishByEmail(wish);
 }
 
 function generateWishQuest(wish) {
@@ -1188,6 +1190,34 @@ function generateWishQuest(wish) {
       bribeLine
     ]
   };
+}
+
+function sendWishByEmail(wish) {
+  const subject = `Wish Letter: ${wish.project}`;
+  const body = [
+    "Booboo Supply Petition",
+    "",
+    `Project: ${wish.project}`,
+    "",
+    "Requested Materials:",
+    ...wish.materials.map((entry) => `- ${entry.quantity}x ${entry.name}`),
+    "",
+    "Why Danita Wants It:",
+    wish.note || "No extra note was written.",
+    "",
+    "Bribe / Sweetener:",
+    wish.bribe || "No extra bribery was offered.",
+    "",
+    "Quest Generated:",
+    wish.quest.title,
+    wish.quest.description,
+    "",
+    "Objectives:",
+    ...wish.quest.objectives.map((objective) => `- ${objective}`)
+  ].join("\n");
+
+  const mailtoUrl = `mailto:${encodeURIComponent(WISH_LETTER_EMAIL)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = mailtoUrl;
 }
 
 function startRevivalJourney() {
