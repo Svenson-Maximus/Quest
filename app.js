@@ -2,7 +2,6 @@ const PASSWORD = "Danitas-Quest";
 const SAVE_KEY = "danitas-quest-save-v1";
 const UNLOCK_KEY = "danitas-quest-unlocked";
 const BOOBOO_PASSWORD = "teamo";
-const BOOBOO_UNLOCK_KEY = "danitas-quest-booboo-unlocked";
 const TRACKS = ["building", "gathering", "pathfinder"];
 const XP_PER_QUEST = 100;
 const XP_BOTTLE_AVERAGE = 7;
@@ -146,6 +145,7 @@ let openWishId = null;
 let wishModalMode = "compose";
 let currentView = "danita";
 let selectedBoobooWishId = null;
+let boobooUnlocked = false;
 
 populateBlockSky();
 
@@ -1231,6 +1231,7 @@ boobooViewButton.addEventListener("click", () => {
 });
 
 danitaViewButton.addEventListener("click", () => {
+  lockBoobooView();
   currentView = "danita";
   render();
 });
@@ -1538,11 +1539,15 @@ function syncWishDraftFromForm() {
 }
 
 function isBoobooUnlocked() {
-  return localStorage.getItem(BOOBOO_UNLOCK_KEY) === "true";
+  return boobooUnlocked;
 }
 
 function unlockBoobooView() {
-  localStorage.setItem(BOOBOO_UNLOCK_KEY, "true");
+  boobooUnlocked = true;
+}
+
+function lockBoobooView() {
+  boobooUnlocked = false;
 }
 
 function getSelectedBoobooWish() {
