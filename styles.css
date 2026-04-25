@@ -1610,7 +1610,8 @@ textarea:focus {
   stroke-dasharray: var(--path-length, 0);
   stroke-dashoffset: var(--path-length, 0);
   filter: drop-shadow(0 0 8px rgba(86, 179, 255, 0.9));
-  animation: journey-path-draw 2.4s ease forwards;
+  animation: journey-path-draw var(--path-duration, 1400ms) ease forwards;
+  animation-delay: var(--path-delay, 0ms);
 }
 
 .journey-node {
@@ -1638,7 +1639,7 @@ textarea:focus {
 .journey-node.completed::after {
   background: radial-gradient(circle at 35% 35%, #d9f4ff, #78c9ff 58%, #245f98 100%);
   transform: scale(0);
-  animation: journey-node-pop 420ms ease forwards;
+  animation: journey-node-pop var(--node-duration, 520ms) ease forwards;
   animation-delay: var(--delay, 0ms);
 }
 

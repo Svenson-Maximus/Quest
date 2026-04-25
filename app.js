@@ -12,6 +12,9 @@ const TRACK_IMAGES = {
 };
 const PROFILE_CARD_IMAGE = "profilecard.png";
 const MEMORY_NOTE_KEY = "danitas-memory-notes-v1";
+const SKILL_TREE_LINE_DURATION = 1400;
+const SKILL_TREE_NODE_DURATION = 520;
+const SKILL_TREE_STEP_GAP = 220;
 const STORY_IMAGES = [
   {
     src: "storyimages/image.png",
@@ -1066,7 +1069,7 @@ function renderSkillTreeCard() {
           ${journey.segments.map((segment) => `
             <line
               class="journey-path ${escapeHtml(segment.track)}"
-              style="--path-length:${segment.length.toFixed(2)};"
+              style="--path-length:${segment.length.toFixed(2)}; --path-delay:${segment.delay}ms; --path-duration:${segment.duration}ms;"
               x1="${segment.from.x}"
               y1="${segment.from.y}"
               x2="${segment.to.x}"
@@ -1077,7 +1080,7 @@ function renderSkillTreeCard() {
         ${journey.nodes.map((node) => `
           <div
             class="journey-node completed ${escapeHtml(node.track)}"
-            style="--x:${node.x}; --y:${node.y}; --delay:${node.delay}ms;"
+            style="--x:${node.x}; --y:${node.y}; --delay:${node.delay}ms; --node-duration:${node.duration}ms;"
             title="${escapeHtml(node.label)}"
             aria-label="${escapeHtml(node.label)}"
           ></div>
@@ -1135,13 +1138,14 @@ function getJourneyMapData() {
         x: column.x,
         y,
         delay: 0,
+        duration: SKILL_TREE_NODE_DURATION,
         label: `${QUESTS[column.track].title} quest ${index + 1}`
       });
     }
   });
 
   const trackQuestCounts = Object.fromEntries(TRACKS.map((track) => [track, 0]));
-  const pathPoints = [];
+  const orderedProgress = [];
 
   save.history
     .filter((entry) => TRACKS.includes(entry.track))
@@ -1152,35 +1156,50 @@ function getJourneyMapData() {
       const node = nodes.find((item) => item.track === entry.track && item.questIndex === questIndex);
       if (!node) return;
 
-      node.delay = index * 180;
       node.label = `${entry.trackTitle}: ${entry.questTitle}`;
-      pathPoints.push({ x: node.x, y: node.y });
+      orderedProgress.push({
+        index,
+        track: entry.track,
+        questIndex,
+        node
+      });
     });
 
   const segments = [];
-  TRACKS.forEach((track) => {
-    const trackNodes = nodes
-      .filter((node) => node.track === track)
-      .sort((a, b) => a.questIndex - b.questIndex);
-
-    for (let index = 1; index < trackNodes.length; index += 1) {
-      const from = trackNodes[index - 1];
-      const to = trackNodes[index];
-      segments.push({
-        track,
-        from,
-        to,
-        length: Math.sqrt(((to.x - from.x) ** 2) + ((to.y - from.y) ** 2))
-      });
+  let elapsed = 0;
+  orderedProgress.forEach((step) => {
+    const { node, track, questIndex } = step;
+    if (questIndex === 0) {
+      node.delay = elapsed;
+      elapsed += SKILL_TREE_NODE_DURATION + SKILL_TREE_STEP_GAP;
+      return;
     }
+
+    const from = nodes.find((item) => item.track === track && item.questIndex === questIndex - 1);
+    if (!from) {
+      node.delay = elapsed;
+      elapsed += SKILL_TREE_NODE_DURATION + SKILL_TREE_STEP_GAP;
+      return;
+    }
+
+    segments.push({
+      track,
+      from,
+      to: node,
+      delay: elapsed,
+      duration: SKILL_TREE_LINE_DURATION,
+      length: Math.sqrt(((node.x - from.x) ** 2) + ((node.y - from.y) ** 2))
+    });
+    elapsed += SKILL_TREE_LINE_DURATION;
+    node.delay = elapsed;
+    elapsed += SKILL_TREE_NODE_DURATION + SKILL_TREE_STEP_GAP;
   });
 
   return {
     columns,
     nodes,
-    pathPoints,
     segments,
-    completedCount: pathPoints.length
+    completedCount: orderedProgress.length
   };
 }
 
