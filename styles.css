@@ -281,7 +281,7 @@ h1 {
   gap: 0.7rem;
 }
 
-input[type="password"], input[type="text"] {
+input[type="password"], input[type="text"], textarea {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 4px;
@@ -291,7 +291,13 @@ input[type="password"], input[type="text"] {
   outline: none;
 }
 
-input:focus {
+textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+input:focus,
+textarea:focus {
   border-color: var(--frost);
   box-shadow: 0 0 0 3px rgba(184, 215, 216, 0.18);
 }
@@ -349,6 +355,24 @@ input:focus {
   pointer-events: none;
 }
 
+.player-dashboard {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr);
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.wish-board {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 1rem;
+  margin: 1rem 0;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.055), transparent 30%),
+    var(--panel);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.36), inset 0 0 0 2px rgba(0, 0, 0, 0.45);
+}
+
 .summary-panel {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -357,6 +381,7 @@ input:focus {
 }
 
 .summary-panel div,
+.player-card,
 .quest-card,
 .history-panel {
   border: 1px solid var(--line);
@@ -369,6 +394,7 @@ input:focus {
 }
 
 .summary-panel div { padding: 1rem; }
+.player-card { padding: 1rem; }
 .summary-panel span {
   display: block;
   color: #f4ead0;
@@ -381,6 +407,203 @@ input:focus {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+.player-card-head,
+.wish-board-head,
+.cosmetic-track-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 1rem;
+}
+
+.player-card-head h2,
+.wish-board-head h2 {
+  margin: 0;
+  color: #f4ead0;
+}
+
+.player-level-medallion {
+  min-width: 84px;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(240, 216, 137, 0.65);
+  border-radius: 999px;
+  text-align: center;
+  color: #fff2bc;
+  font-weight: 900;
+  background: linear-gradient(180deg, rgba(91, 73, 37, 0.8), rgba(27, 22, 18, 0.92));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.player-title-banner {
+  margin: 1rem 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(184, 215, 216, 0.4);
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(184, 215, 216, 0.18), rgba(0, 0, 0, 0.16));
+}
+
+.player-title-banner strong,
+.player-title-banner span {
+  display: block;
+}
+
+.player-title-banner strong {
+  color: #f6ebca;
+  font-size: 1.1rem;
+}
+
+.player-title-banner span {
+  margin-top: 0.25rem;
+  color: var(--muted);
+}
+
+.player-card-stats,
+.path-levels,
+.cosmetic-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.player-card-stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.player-card-stats div,
+.path-level-chip,
+.cosmetic-item {
+  border: 1px solid rgba(199, 167, 91, 0.32);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.player-card-stats div {
+  padding: 0.75rem;
+}
+
+.player-card-stats strong,
+.player-card-stats span {
+  display: block;
+}
+
+.player-card-stats strong {
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.player-card-stats span {
+  margin-top: 0.3rem;
+  color: #f4ead0;
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+
+.path-levels {
+  margin-top: 0.9rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.path-level-chip {
+  padding: 0.8rem;
+}
+
+.path-level-chip strong,
+.path-level-chip span {
+  display: block;
+}
+
+.path-level-chip strong {
+  color: #f4ead0;
+  margin-bottom: 0.35rem;
+}
+
+.path-level-chip span {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.cosmetic-track {
+  margin-top: 1rem;
+}
+
+.cosmetic-track-head span {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.cosmetic-list {
+  margin-top: 0.75rem;
+}
+
+.cosmetic-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.72rem 0.85rem;
+}
+
+.cosmetic-item.unlocked {
+  border-color: rgba(240, 216, 137, 0.62);
+  background: linear-gradient(90deg, rgba(240, 216, 137, 0.16), rgba(0, 0, 0, 0.18));
+}
+
+.cosmetic-item.locked {
+  opacity: 0.58;
+}
+
+.wish-list {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.wish-card {
+  border: 1px solid rgba(199, 167, 91, 0.34);
+  border-radius: 6px;
+  padding: 0.85rem;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.wish-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: start;
+}
+
+.wish-card-head strong,
+.wish-card-head span {
+  display: block;
+}
+
+.wish-card-head strong {
+  color: #f4ead0;
+}
+
+.wish-card-head span,
+.wish-card p,
+.wish-empty {
+  color: var(--muted);
+}
+
+.wish-card p {
+  margin: 0.7rem 0 0.55rem;
+}
+
+.wish-material-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.wish-material-preview span {
+  padding: 0.28rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(199, 167, 91, 0.14);
+  color: #f1e2b2;
+  font-size: 0.88rem;
 }
 
 .tracks {
@@ -748,6 +971,11 @@ input:focus {
   padding: 1.2rem;
 }
 
+.wish-panel {
+  width: min(820px, 100%);
+  padding: 1.2rem;
+}
+
 .image-modal-copy {
   margin-bottom: 1rem;
 }
@@ -767,6 +995,81 @@ input:focus {
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.3);
   box-shadow: 0 0 28px rgba(240, 216, 137, 0.16), inset 0 0 0 1px rgba(0, 0, 0, 0.45);
+}
+
+.parchment {
+  color: #312417;
+  background:
+    radial-gradient(circle at top, rgba(255, 248, 220, 0.54), transparent 36%),
+    linear-gradient(180deg, #e4cf9a 0%, #d6be86 48%, #c9ac71 100%);
+  border: 1px solid rgba(88, 56, 24, 0.55);
+  border-radius: 10px;
+  padding: 1.2rem;
+  box-shadow: inset 0 0 34px rgba(109, 73, 30, 0.18), 0 18px 42px rgba(0, 0, 0, 0.32);
+}
+
+.wish-letter h2,
+.wish-letter h3,
+.wish-letter p,
+.wish-letter strong,
+.wish-letter label {
+  color: #312417;
+}
+
+.wish-seal {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #6f4322;
+}
+
+.wish-meta {
+  margin-top: 0.35rem;
+  color: #6a5032;
+}
+
+.wish-form {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.wish-materials-head,
+.wish-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.wish-material-editor {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.wish-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 140px;
+  gap: 0.65rem;
+}
+
+.wish-row input,
+.wish-form textarea,
+.wish-form #wish-project {
+  background: rgba(255, 248, 226, 0.6);
+  color: #2d2116;
+  border-color: rgba(88, 56, 24, 0.36);
+}
+
+.wish-letter-section {
+  margin-top: 1rem;
+}
+
+.wish-material-list,
+.wish-quest-list {
+  margin: 0.6rem 0 0;
+  padding-left: 1.2rem;
 }
 
 .modal-close {
@@ -1117,12 +1420,17 @@ input:focus {
     justify-content: flex-start;
     margin-top: 1rem;
   }
-  .summary-panel, .tracks { grid-template-columns: 1fr; }
+  .player-dashboard,
+  .summary-panel,
+  .tracks,
+  .player-card-stats,
+  .path-levels { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 560px) {
   .password-row, .quest-actions { grid-template-columns: 1fr; }
   .level-reward-row { grid-template-columns: 1fr; }
+  .wish-row { grid-template-columns: 1fr; }
   .track-image {
     width: 66px;
     height: 66px;
@@ -1142,5 +1450,14 @@ input:focus {
   }
   .revival-actions {
     justify-content: stretch;
+  }
+  .player-card-head,
+  .wish-board-head,
+  .wish-card-head,
+  .cosmetic-item,
+  .wish-actions,
+  .wish-materials-head,
+  .cosmetic-track-head {
+    display: grid;
   }
 }

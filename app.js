@@ -16,6 +16,15 @@ const QUEST_COMPLETE_SOUND_START = 4.3;
 const QUEST_COMPLETE_SOUND_END = 4.9;
 const PAGE_ENTRY_SOUND = "skairin.mp3";
 const LEVEL_UP_SOUND = "42dfb7_skyrim_level_up_sound_effect.mp3";
+const PLAYER_TITLES = [
+  { level: 1, title: "Hearthbound Wanderer", flavor: "The road has only just begun." },
+  { level: 3, title: "Lantern Bearer", flavor: "Small duties now glow like proper vows." },
+  { level: 5, title: "Hall Warden", flavor: "Home stands firmer when Danita returns." },
+  { level: 8, title: "Relic Keeper", flavor: "Treasures become history instead of clutter." },
+  { level: 11, title: "Road Regent", flavor: "Safe paths start to answer to her name." },
+  { level: 15, title: "Mist Scribe", flavor: "The realm remembers because she writes it down." },
+  { level: 20, title: "Starforged Chronicler", flavor: "Journeys and memories now shine as one tale." }
+];
 
 const gate = document.querySelector("#gate");
 const app = document.querySelector("#app");
@@ -32,11 +41,17 @@ const importInput = document.querySelector("#import-save");
 const resetButton = document.querySelector("#reset-save");
 const mainTitle = document.querySelector("#main-title");
 const revivalButton = document.querySelector("#revival-button");
+const wishButton = document.querySelector("#wish-button");
 const revivalModal = document.querySelector("#revival-modal");
 const revivalContent = document.querySelector("#revival-content");
 const imageModal = document.querySelector("#image-modal");
 const imageModalTitle = document.querySelector("#image-modal-title");
 const imageModalPreview = document.querySelector("#image-modal-preview");
+const playerCardEl = document.querySelector("#player-card");
+const wishBoardButton = document.querySelector("#wish-board-button");
+const wishListEl = document.querySelector("#wish-list");
+const wishModal = document.querySelector("#wish-modal");
+const wishModalContent = document.querySelector("#wish-modal-content");
 
 const REVIVAL_LEVEL_RITUALS = [
   {
@@ -118,6 +133,9 @@ let completionAudio;
 let completionAudioStopTimer;
 let pageEntryAudio;
 let levelUpAudio;
+let wishDraft = createWishDraft();
+let openWishId = null;
+let wishModalMode = "compose";
 
 function defaultSave() {
   const tracks = {};
@@ -130,6 +148,7 @@ function defaultSave() {
     updatedAt: new Date().toISOString(),
     activeQuest: null,
     tracks,
+    wishes: [],
     history: [],
     revival: defaultRevivalState()
   };
@@ -152,6 +171,7 @@ function normalizeSave(candidate) {
     ...candidate,
     activeQuest: normalizeActiveQuest(candidate.activeQuest),
     tracks: { ...base.tracks, ...(candidate.tracks || {}) },
+    wishes: Array.isArray(candidate.wishes) ? candidate.wishes.map(normalizeWish).filter(Boolean) : [],
     history: Array.isArray(candidate.history) ? candidate.history : [],
     revival: normalizeRevivalState(candidate.revival)
   };
@@ -185,6 +205,51 @@ function normalizeActiveQuest(candidate) {
     title: candidate.title || "",
     activatedAt: candidate.activatedAt || new Date().toISOString(),
     objectiveProgress: Array.isArray(candidate.objectiveProgress) ? candidate.objectiveProgress : []
+  };
+}
+
+function createWishDraft() {
+  return {
+    project: "",
+    note: "",
+    bribe: "",
+    materials: Array.from({ length: 4 }, () => ({ name: "", quantity: "" }))
+  };
+}
+
+function normalizeWish(candidate) {
+  if (!candidate || typeof candidate !== "object") {
+    return null;
+  }
+
+  const materials = Array.isArray(candidate.materials)
+    ? candidate.materials
+      .map((entry) => ({
+        name: typeof entry?.name === "string" ? entry.name.trim() : "",
+        quantity: typeof entry?.quantity === "string" || Number.isFinite(entry?.quantity)
+          ? String(entry.quantity).trim()
+          : ""
+      }))
+      .filter((entry) => entry.name && entry.quantity)
+    : [];
+
+  return {
+    id: candidate.id || `wish-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    createdAt: candidate.createdAt || new Date().toISOString(),
+    project: candidate.project || "Unnamed Build Wish",
+    note: candidate.note || "",
+    bribe: candidate.bribe || "",
+    materials,
+    quest: candidate.quest && typeof candidate.quest === "object" ? {
+      title: candidate.quest.title || "Booboo's Supply Run",
+      description: candidate.quest.description || "",
+      objectives: Array.isArray(candidate.quest.objectives) ? candidate.quest.objectives : []
+    } : generateWishQuest({
+      project: candidate.project || "Unnamed Build Wish",
+      note: candidate.note || "",
+      bribe: candidate.bribe || "",
+      materials
+    })
   };
 }
 
@@ -332,9 +397,12 @@ passwordForm.addEventListener("submit", (event) => {
 
 function render() {
   tracksEl.innerHTML = TRACKS.map(renderTrack).join("");
+  renderPlayerCard();
+  renderWishBoard();
   renderSummary();
   renderHistory();
   renderRevivalModal();
+  renderWishModal();
 }
 
 function renderTrack(trackName) {
@@ -448,6 +516,159 @@ function renderSummary() {
   currentFocusEl.textContent = QUESTS[leader.name].title;
 }
 
+function renderPlayerCard() {
+  const profile = getPlayerProfile();
+  const nextTitle = PLAYER_TITLES.find((entry) => entry.level > profile.playerLevel);
+
+  playerCardEl.innerHTML = `
+    <div class="player-card-head">
+      <div>
+        <p class="eyebrow">Player Card</p>
+        <h2>${escapeHtml(save.player)}</h2>
+      </div>
+      <div class="player-level-medallion">Lv ${profile.playerLevel}</div>
+    </div>
+    <div class="player-title-banner">
+      <strong>${escapeHtml(profile.currentTitle.title)}</strong>
+      <span>${escapeHtml(profile.currentTitle.flavor)}</span>
+    </div>
+    <div class="player-card-stats">
+      <div><strong>Total XP</strong><span>${profile.totalXp}</span></div>
+      <div><strong>Quests Done</strong><span>${profile.totalComplete}</span></div>
+      <div><strong>Best Path</strong><span>${escapeHtml(profile.strongestPath)}</span></div>
+    </div>
+    <div class="path-levels">
+      ${TRACKS.map((track) => `
+        <div class="path-level-chip ${escapeHtml(track)}">
+          <strong>${escapeHtml(QUESTS[track].title)}</strong>
+          <span>Lv ${save.tracks[track].level}</span>
+        </div>
+      `).join("")}
+    </div>
+    <div class="cosmetic-track">
+      <div class="cosmetic-track-head">
+        <strong>Cosmetic Titles</strong>
+        <span>${nextTitle ? `Next at Lv ${nextTitle.level}: ${escapeHtml(nextTitle.title)}` : "All titles unlocked"}</span>
+      </div>
+      <div class="cosmetic-list">
+        ${PLAYER_TITLES.map((entry) => `
+          <div class="cosmetic-item ${profile.playerLevel >= entry.level ? "unlocked" : "locked"}">
+            <strong>${escapeHtml(entry.title)}</strong>
+            <span>Lv ${entry.level}</span>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderWishBoard() {
+  if (!save.wishes.length) {
+    wishListEl.innerHTML = "<p class=\"wish-empty\">No letters sent yet. Write a Skyrim-style material request to Booboo and it will stay here after sending.</p>";
+    return;
+  }
+
+  wishListEl.innerHTML = save.wishes
+    .slice()
+    .reverse()
+    .map((wish) => `
+      <article class="wish-card">
+        <div class="wish-card-head">
+          <div>
+            <strong>${escapeHtml(wish.project)}</strong>
+            <span>${new Date(wish.createdAt).toLocaleString()}</span>
+          </div>
+          <button type="button" data-action="open-wish" data-wish-id="${escapeHtml(wish.id)}">Open Letter</button>
+        </div>
+        <p>${escapeHtml(wish.quest.title)}</p>
+        <div class="wish-material-preview">
+          ${wish.materials.slice(0, 4).map((entry) => `<span>${escapeHtml(entry.quantity)}x ${escapeHtml(entry.name)}</span>`).join("")}
+        </div>
+      </article>
+    `)
+    .join("");
+}
+
+function renderWishModal() {
+  if (wishModal.classList.contains("hidden")) {
+    return;
+  }
+
+  if (wishModalMode === "read") {
+    const wish = save.wishes.find((entry) => entry.id === openWishId);
+    if (!wish) {
+      closeWishModal();
+      return;
+    }
+
+    wishModalContent.innerHTML = `
+      <article class="wish-letter parchment">
+        <p class="wish-seal">Booboo Supply Petition</p>
+        <h2 id="wish-modal-title">${escapeHtml(wish.project)}</h2>
+        <p class="wish-meta">Sent ${new Date(wish.createdAt).toLocaleString()}</p>
+        <section class="wish-letter-section">
+          <h3>Requested Materials</h3>
+          <ul class="wish-material-list">
+            ${wish.materials.map((entry) => `<li><strong>${escapeHtml(entry.quantity)}x</strong> ${escapeHtml(entry.name)}</li>`).join("")}
+          </ul>
+        </section>
+        <section class="wish-letter-section">
+          <h3>Why Danita Wants It</h3>
+          <p>${escapeHtml(wish.note || "No extra build note was written.")}</p>
+        </section>
+        <section class="wish-letter-section">
+          <h3>Bribe / Sweetener</h3>
+          <p>${escapeHtml(wish.bribe || "No extra bribery was offered.")}</p>
+        </section>
+        <section class="wish-letter-section">
+          <h3>Quest Booboo Receives</h3>
+          <p>${escapeHtml(wish.quest.description)}</p>
+          <ol class="wish-quest-list">
+            ${wish.quest.objectives.map((objective) => `<li>${escapeHtml(objective)}</li>`).join("")}
+          </ol>
+        </section>
+      </article>
+    `;
+    return;
+  }
+
+  wishModalContent.innerHTML = `
+    <article class="wish-letter parchment">
+      <p class="wish-seal">Booboo Supply Petition</p>
+      <h2 id="wish-modal-title">Write A Wish Letter</h2>
+      <p class="wish-meta">Ask for building supplies, a project goal, and maybe a little bribery.</p>
+      <div class="wish-form">
+        <label class="field-label" for="wish-project">What is being built?</label>
+        <input id="wish-project" type="text" value="${escapeHtml(wishDraft.project)}" placeholder="Example: village bathhouse roof">
+
+        <label class="field-label" for="wish-note">Why is it needed?</label>
+        <textarea id="wish-note" rows="4" placeholder="Explain the build, the mood, or what Danita wants finished.">${escapeHtml(wishDraft.note)}</textarea>
+
+        <div class="wish-materials-head">
+          <strong>Material List</strong>
+          <button type="button" data-action="add-wish-row">Add Line</button>
+        </div>
+        <div class="wish-material-editor">
+          ${wishDraft.materials.map((entry, index) => `
+            <div class="wish-row">
+              <input type="text" data-field="wish-material-name" data-index="${index}" value="${escapeHtml(entry.name)}" placeholder="Material">
+              <input type="text" data-field="wish-material-quantity" data-index="${index}" value="${escapeHtml(entry.quantity)}" placeholder="Amount">
+            </div>
+          `).join("")}
+        </div>
+
+        <label class="field-label" for="wish-bribe">Bribe / sweet message</label>
+        <textarea id="wish-bribe" rows="3" placeholder="Massage, compliment, snack promise, or anything persuasive.">${escapeHtml(wishDraft.bribe)}</textarea>
+
+        <div class="wish-actions">
+          <button type="button" data-action="send-wish">Send Letter</button>
+          <button type="button" data-action="close-wish">Cancel</button>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
 function renderHistory() {
   if (!save.history.length) {
     historyList.innerHTML = "<p>No quests completed yet. Danita's chronicle begins with the first finished task.</p>";
@@ -481,6 +702,23 @@ function renderHistory() {
       </details>
     `)
     .join("");
+}
+
+function getPlayerProfile() {
+  const states = TRACKS.map((track) => ({ name: track, ...save.tracks[track] }));
+  const totalXp = states.reduce((sum, state) => sum + state.xp, 0);
+  const totalComplete = states.reduce((sum, state) => sum + state.completed.length, 0);
+  const playerLevel = Math.floor(totalXp / 300) + 1;
+  const strongest = states.slice().sort((a, b) => b.level - a.level || b.xp - a.xp)[0];
+  const currentTitle = PLAYER_TITLES.filter((entry) => entry.level <= playerLevel).slice(-1)[0] || PLAYER_TITLES[0];
+
+  return {
+    totalXp,
+    totalComplete,
+    playerLevel,
+    strongestPath: QUESTS[strongest.name].title,
+    currentTitle
+  };
 }
 
 function renderTrackHeader(trackName, trackData, state, completedCount, totalCount) {
@@ -688,6 +926,20 @@ revivalButton.addEventListener("click", () => {
   openRevivalModal();
 });
 
+wishButton.addEventListener("click", () => {
+  openWishComposeModal();
+});
+
+wishBoardButton.addEventListener("click", () => {
+  openWishComposeModal();
+});
+
+wishListEl.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-action='open-wish']");
+  if (!button) return;
+  openWishReadModal(button.dataset.wishId);
+});
+
 revivalModal.addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-action], .modal-backdrop[data-action]");
   if (!button) return;
@@ -757,9 +1009,41 @@ imageModal.addEventListener("click", (event) => {
   closeImageModal();
 });
 
+wishModal.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-action], .modal-backdrop[data-action]");
+  if (!button) return;
+
+  syncWishDraftFromForm();
+  const action = button.dataset.action;
+
+  if (action === "close-wish") {
+    closeWishModal();
+    return;
+  }
+
+  if (action === "add-wish-row") {
+    wishDraft.materials.push({ name: "", quantity: "" });
+    renderWishModal();
+    return;
+  }
+
+  if (action === "send-wish") {
+    submitWishDraft();
+  }
+});
+
+wishModal.addEventListener("input", (event) => {
+  if (!event.target.closest(".wish-form")) return;
+  syncWishDraftFromForm();
+});
+
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !imageModal.classList.contains("hidden")) {
     closeImageModal();
+  }
+
+  if (event.key === "Escape" && !wishModal.classList.contains("hidden")) {
+    closeWishModal();
   }
 
   if (event.key === "Escape" && !revivalModal.classList.contains("hidden")) {
@@ -809,9 +1093,101 @@ function closeImageModal() {
   syncBodyModalState();
 }
 
+function openWishComposeModal() {
+  wishDraft = createWishDraft();
+  openWishId = null;
+  wishModalMode = "compose";
+  wishModal.classList.remove("hidden");
+  wishModal.setAttribute("aria-hidden", "false");
+  syncBodyModalState();
+  renderWishModal();
+}
+
+function openWishReadModal(wishId) {
+  openWishId = wishId;
+  wishModalMode = "read";
+  wishModal.classList.remove("hidden");
+  wishModal.setAttribute("aria-hidden", "false");
+  syncBodyModalState();
+  renderWishModal();
+}
+
+function closeWishModal() {
+  wishModal.classList.add("hidden");
+  wishModal.setAttribute("aria-hidden", "true");
+  openWishId = null;
+  wishModalMode = "compose";
+  syncBodyModalState();
+}
+
 function syncBodyModalState() {
-  const hasOpenModal = !revivalModal.classList.contains("hidden") || !imageModal.classList.contains("hidden");
+  const hasOpenModal = !revivalModal.classList.contains("hidden") || !imageModal.classList.contains("hidden") || !wishModal.classList.contains("hidden");
   document.body.classList.toggle("modal-open", hasOpenModal);
+}
+
+function syncWishDraftFromForm() {
+  if (wishModalMode !== "compose") return;
+
+  const projectInput = document.querySelector("#wish-project");
+  const noteInput = document.querySelector("#wish-note");
+  const bribeInput = document.querySelector("#wish-bribe");
+
+  if (!projectInput || !noteInput || !bribeInput) return;
+
+  wishDraft.project = projectInput.value;
+  wishDraft.note = noteInput.value;
+  wishDraft.bribe = bribeInput.value;
+  wishDraft.materials = Array.from(document.querySelectorAll(".wish-row")).map((row) => ({
+    name: row.querySelector("[data-field='wish-material-name']")?.value || "",
+    quantity: row.querySelector("[data-field='wish-material-quantity']")?.value || ""
+  }));
+}
+
+function submitWishDraft() {
+  syncWishDraftFromForm();
+
+  const materials = wishDraft.materials
+    .map((entry) => ({ name: entry.name.trim(), quantity: entry.quantity.trim() }))
+    .filter((entry) => entry.name && entry.quantity);
+
+  const project = wishDraft.project.trim();
+  if (!project || !materials.length) {
+    window.alert("Write what Danita is building and add at least one material with an amount.");
+    return;
+  }
+
+  const wish = normalizeWish({
+    createdAt: new Date().toISOString(),
+    project,
+    note: wishDraft.note.trim(),
+    bribe: wishDraft.bribe.trim(),
+    materials
+  });
+
+  save.wishes.push(wish);
+  if (save.wishes.length > 16) {
+    save.wishes = save.wishes.slice(-16);
+  }
+  persist();
+  render();
+  openWishReadModal(wish.id);
+}
+
+function generateWishQuest(wish) {
+  const firstMaterials = wish.materials.slice(0, 3).map((entry) => `${entry.quantity} ${entry.name}`);
+  const materialSummary = firstMaterials.join(", ");
+  const bribeLine = wish.bribe ? "Collect the promised bribe, comfort, or sweetener from Danita." : "Collect whatever gratitude Danita offers when the delivery is done.";
+
+  return {
+    title: `Booboo's ${wish.project} Supply Run`,
+    description: `Danita has asked for ${materialSummary || "building supplies"} so the ${wish.project} can move forward without stalling.`,
+    objectives: [
+      `Review the request for ${wish.project} and gather the listed materials.`,
+      `Deliver ${wish.materials.map((entry) => `${entry.quantity} ${entry.name}`).join(", ")} to the build stash or project site.`,
+      wish.note ? `Keep Danita's note in mind: ${wish.note}` : `Check in with Danita so the supplies match the build she wants finished.`,
+      bribeLine
+    ]
+  };
 }
 
 function startRevivalJourney() {
